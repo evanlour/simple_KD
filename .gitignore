@@ -1,0 +1,15 @@
+simple_kd.egg-info/
+.ropeproject/
+.ruff_cache/
+utils/__pychache__/
+simple_kd/utils/__pycache__/
+simple_kd/losses/__pycache__/
+simple_kd/losses/functional/
+simple_kd/training/__pycache__/
+notes.txt
+pending.txt
+example.txt
+simple_kd/generators/__pycache__/
+simple_kd/data_free/__pycache__/
+simple_kd/data_free/losses/__pycache__/
+simple_kd/data_free/losses/functional/__pycache__/
