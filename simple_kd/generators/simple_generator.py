@@ -18,13 +18,13 @@ class SimpleGenerator(torch.nn.Module):
 
         self.block1 = torch.nn.Sequential(
             torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-            torch.nn.BatchNorm2d(128, momentum=0.8),
+            torch.nn.BatchNorm2d(128, momentum=0.1),
             torch.nn.LeakyReLU(0.2, inplace=True),
         )
 
         self.block2 = torch.nn.Sequential(
             torch.nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1),
-            torch.nn.BatchNorm2d(64, momentum=0.8),
+            torch.nn.BatchNorm2d(64, momentum=0.1),
             torch.nn.LeakyReLU(0.2, inplace=True),
             torch.nn.Conv2d(64, channels, kernel_size=3, stride=1, padding=1),
             torch.nn.Tanh(),

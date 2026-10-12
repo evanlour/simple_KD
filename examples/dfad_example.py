@@ -11,10 +11,10 @@ from simple_kd.data_free import dfad_train
 from simple_kd.generators import SimpleGenerator
 
 CLASSES = 100
-EPOCHS = 200
+EPOCHS = 500
 BATCH = 256
 WORKERS = 2
-STEPS_PER_EPOCH = 50
+STEPS_PER_EPOCH = 100
 GENERATOR_LATENT_SIZE = 128
 
 TRAIN_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_train_images.npy"
@@ -31,7 +31,7 @@ CPU_AUGS = v2.Compose([
 ])
 
 GPU_AUGS = v2.Compose([
-    v2.RandomHorizontalFlip(p=0.5),
+    #v2.RandomHorizontalFlip(p=0.5),
     # v2.RandAugment(num_ops=2, magnitude=9), # RandAugment is unsafe and crashes the generator!
     v2.ToDtype(torch.float32, scale=True),
     v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     image_generator = SimpleGenerator(32, 128, 3)
 
-    student_optimizer = torch.optim.SGD(student_model.parameters(), lr=1e-1, weight_decay=5e-4, momentum=0.9, nesterov=True, fused=True)
+    student_optimizer = torch.optim.SGD(student_model.parameters(), lr=1e-1, weight_decay=5e-4, momentum=0.9, nesterov=False, fused=True)
     student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(student_optimizer, T_max=EPOCHS, eta_min=2e-3)
     generator_optimizer = torch.optim.AdamW(image_generator.parameters(), lr=2e-3, betas=(0.9, 0.999), weight_decay=0.05, fused=True)
     generator_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(generator_optimizer, T_max=EPOCHS, eta_min=5e-4)

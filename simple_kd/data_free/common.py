@@ -13,6 +13,29 @@ def _filter_kwargs_for_callable(fn, kwargs: dict) -> dict:
         if k in valid_names and v is not None
     }
 
+def compute_generator_metrics(images: torch.Tensor, teacher_logits: torch.Tensor) -> dict:
+    """
+    Computes quality, diversity, and spread metrics directly from existing step tensors.
+    """
+    with torch.no_grad():
+        probs = torch.softmax(teacher_logits, dim=-1)
+
+        conf = probs.max(dim=-1).values.mean().item() # Quality / Semantic Fidelity (Ideal: > 0.70)
+
+        # Batch-level Class Diversity (Ideal: > 0.70 - 0.90)
+        mean_dist = probs.mean(dim=0)
+        num_classes = probs.size(-1)
+        entropy = -(mean_dist * torch.log(mean_dist + 1e-8)).sum().item()
+        norm_entropy = entropy / torch.log(torch.tensor(float(num_classes))).item()
+
+        pixel_spread = images.std(dim=0).mean().item() # Spatial/Pixel Diversity (Rules out flat gray/checkerboard collapse; Ideal: > 0.15)
+
+    return {
+        "gen_conf": conf,
+        "gen_entropy": norm_entropy,
+        "gen_spread": pixel_spread,
+    }
+
 def images_from_generator(generator: torch.nn.Module,
                           augmentations: torch.nn.Module,
                           device: torch.device,
@@ -52,6 +75,7 @@ def train_model_with_generator(accelerator: Accelerator,
         student_output = student_model(images)
         with torch.no_grad():
             teacher_output = teacher_model(images)
+            generator_statistics = compute_generator_metrics(images, teacher_output)
         available_args = {
             "student_output": student_output,
             "teacher_output": teacher_output.detach() if teacher_output is not None else None,
@@ -66,7 +90,7 @@ def train_model_with_generator(accelerator: Accelerator,
             accelerator.unscale_gradients(student_optimizer)
             clipper(student_model.parameters())
         student_optimizer.step()
-    return train_loss
+    return train_loss, generator_statistics
 
 
 def train_generator(accelerator: Accelerator,
@@ -100,6 +124,7 @@ def train_generator(accelerator: Accelerator,
 
         if clipper is not None:
             accelerator.unscale_gradients(generator_optimizer)
-            clipper(student_model.parameters())
+            clipper(generator.parameters())
         generator_optimizer.step()
+
     return train_loss

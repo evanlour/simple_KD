@@ -34,24 +34,35 @@ def dfad_train(accelerator: Accelerator,
                 save_history: bool = True) -> dict:
 
     criterion = DFADLoss(use_log1p=True).to(accelerator.device)
-    generator_criterion = DFADLoss(sign=-1, use_log1p=True).to(accelerator.device)
-    history = {"student_loss": [], "generator_loss": [], "student_lr": [], "generator_lr": [], "epoch_time": []}
+    generator_criterion = DFADLoss(sign=-1, use_log1p=False).to(accelerator.device)
+    history = {"student_loss": [], "generator_loss": [], "student_lr": [], "generator_lr": [], "gen_conf": [], "gen_entropy": [], "gen_spread": [], "epoch_time": []}
     teacher_model.eval()
     for epoch in range(epochs):
         total_train_loss = torch.tensor(0.0, device=accelerator.device)
+        gen_conf = torch.tensor(0.0, device=accelerator.device)
+        gen_entropy = torch.tensor(0.0, device=accelerator.device)
+        gen_spread = torch.tensor(0.0, device=accelerator.device)
+
         train_total = torch.tensor(0, device=accelerator.device)
         start_time = time.perf_counter()
         for _ in range(steps_per_epoch):
             gen_imgs = images_from_generator(generator, augmentations, accelerator.device, batch_size, generator_latent_size)
-            gen_imgs = gen_imgs.to(memory_format=torch.channels_last)
-            train_loss = train_model_with_generator(accelerator, gen_imgs, student_model, teacher_model,
+            # gen_imgs = gen_imgs.to(memory_format=torch.channels_last)
+            train_loss, gen_statistics = train_model_with_generator(accelerator, gen_imgs, student_model, teacher_model,
                 generator, criterion, student_optimizer, student_stages=student_stages, teacher_stages=teacher_stages, clipper=clipper)
-            total_train_loss += train_loss.detach() * batch_size
+            total_train_loss += train_loss.detach() * batch_size # type: ignore
             train_total += batch_size
+            gen_conf += gen_statistics["gen_conf"] * batch_size
+            gen_entropy += gen_statistics["gen_entropy"] * batch_size
+            gen_spread += gen_statistics["gen_spread"] * batch_size
+
 
         epoch_samples = accelerator.reduce(train_total, reduction="sum").item() # type: ignore
         model_epoch_loss = accelerator.reduce(total_train_loss, reduction="sum")
         model_epoch_loss = model_epoch_loss / epoch_samples
+        gen_conf = accelerator.reduce(gen_conf, reduction="sum").item() / epoch_samples # type: ignore
+        gen_entropy = accelerator.reduce(gen_entropy, reduction="sum").item() / epoch_samples # type: ignore
+        gen_spread = accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples # type: ignore
 
         gen_imgs = images_from_generator(generator, augmentations, accelerator.device, batch_size, generator_latent_size, requires_grad=True)
         gen_loss = train_generator(accelerator, gen_imgs, student_model, teacher_model,
@@ -68,10 +79,14 @@ def dfad_train(accelerator: Accelerator,
             history["student_lr"].append(student_optimizer.param_groups[0]['lr'])
             history["generator_loss"].append(gen_loss.item())
             history["generator_lr"].append(generator_optimizer.param_groups[0]['lr'])
+            history["gen_conf"].append(gen_conf)
+            history["gen_entropy"].append(gen_entropy)
+            history["gen_spread"].append(gen_spread)
             history["epoch_time"].append(epoch_time)
 
             if epoch % print_frequency == 0:
                 temp_message = f"Epoch {epoch+1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f},"
+                temp_message += f" Generator confidence: {gen_conf:.4f}, Generator Entropy: {gen_entropy:.4f}, Generator spread: {gen_spread:.4f},"
                 temp_message += f" Generator Train Loss: {gen_loss:.4f}, Generator lr: {generator_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time}"
                 print(temp_message)
 
