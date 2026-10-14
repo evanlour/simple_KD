@@ -13,3 +13,7 @@ simple_kd/generators/__pycache__/
 simple_kd/data_free/__pycache__/
 simple_kd/data_free/losses/__pycache__/
 simple_kd/data_free/losses/functional/__pycache__/
+tests/__pycache__/
+simple_kd/generators/synthetic_noise/__pycache__/
+examples/__pycache__/
+tests/images/
