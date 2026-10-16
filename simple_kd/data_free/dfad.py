@@ -20,6 +20,9 @@ def dfad_train(accelerator: Accelerator,
                 generator_latent_size: int,
                 steps_per_epoch: int = 50,
                 print_frequency: int = 10,
+                model_multipler: float = 1.0,
+                generator_multiplier: float = 1.0,
+                use_log1p:bool=False,
                 validation_frequency: int = 50,
                 scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
                 generator_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
@@ -33,8 +36,8 @@ def dfad_train(accelerator: Accelerator,
                 save_generator: bool = False,
                 save_history: bool = True) -> dict:
 
-    criterion = DFADLoss(use_log1p=True).to(accelerator.device)
-    generator_criterion = DFADLoss(sign=-1, use_log1p=False).to(accelerator.device)
+    criterion = DFADLoss(sign=1.0 * model_multipler, use_log1p=use_log1p).to(accelerator.device)
+    generator_criterion = DFADLoss(sign=-1.0 * generator_multiplier, use_log1p=use_log1p).to(accelerator.device)
     history = {"student_loss": [], "generator_loss": [], "student_lr": [], "generator_lr": [], "gen_conf": [], "gen_entropy": [], "gen_spread": [], "epoch_time": []}
     teacher_model.eval()
     for epoch in range(epochs):

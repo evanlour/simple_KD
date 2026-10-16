@@ -2,7 +2,7 @@ import torch
 from .functional import dfad_loss
 
 class DFADLoss(torch.nn.Module):
-    def __init__(self, sign=1, use_log1p=False):
+    def __init__(self, sign: float=1.0, use_log1p:bool=False):
         """A very simple wrapper class for the dfad_loss method.
 
         Args:
