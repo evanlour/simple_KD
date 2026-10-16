@@ -23,8 +23,8 @@ def distill(accelerator: Accelerator,
           student_optimizer: torch.optim.Optimizer,
           criterion: torch.nn.Module,
           distillation_criterion: torch.nn.Module,
-          student_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
-          teacher_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
+          student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] =(),
+          teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] =(),
           teacher_optimizer: torch.optim.Optimizer | None = None,
           epochs: int = 10,
           epochs_per_val: int = 1,
@@ -107,9 +107,7 @@ def distill(accelerator: Accelerator,
                 models_to_accumulate.append(teacher_model)
 
             with accelerator.accumulate(*models_to_accumulate):
-                student_optimizer.zero_grad(set_to_none=True)
                 if teacher_optimizer is not None:
-                    teacher_optimizer.zero_grad(set_to_none=True)
                     teacher_output = teacher_model(inputs)
                 else:
                     with torch.no_grad():
@@ -135,15 +133,20 @@ def distill(accelerator: Accelerator,
                 total_loss = teacher_loss + student_loss
                 accelerator.backward(total_loss)
 
-                if clipper is not None:
+                if clipper is not None and accelerator.sync_gradients:
                     accelerator.unscale_gradients(student_optimizer)
                     clipper(student_model.parameters())
                     if teacher_optimizer is not None:
                         accelerator.unscale_gradients(teacher_optimizer)
                         clipper(teacher_model.parameters())
-                        teacher_optimizer.step()
 
-                student_optimizer.step()
+            student_optimizer.step()
+            if teacher_optimizer is not None:
+                teacher_optimizer.step()
+
+            student_optimizer.zero_grad(set_to_none=True)
+            if teacher_optimizer is not None:
+                teacher_optimizer.zero_grad(set_to_none=True)
 
             current_batch_size = labels.size(0)
             train_total += current_batch_size

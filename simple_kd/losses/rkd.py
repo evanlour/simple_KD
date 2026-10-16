@@ -14,7 +14,7 @@ class RKDAngleLoss(torch.nn.Module):
         super().__init__()
         self.stage_percentages = stage_percentages
         self.gamma = gamma
-    def foward(self, student_stages, teacher_stages):
+    def forward(self, student_stages, teacher_stages):
         return rkd_angle_loss(student_stages=student_stages, teacher_stages=teacher_stages, gamma=self.gamma, stage_percentages=self.stage_percentages)
 
 class RKDDistLoss(torch.nn.Module):

@@ -17,3 +17,4 @@ tests/__pycache__/
 simple_kd/generators/synthetic_noise/__pycache__/
 examples/__pycache__/
 tests/images/
+simple_kd/__pycache__/

@@ -72,15 +72,16 @@ def train(accelerator: Accelerator,
                 labels = labels.argmax(dim=-1).squeeze().long()
 
             with accelerator.accumulate(model):
-                optimizer.zero_grad(set_to_none=True)
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 accelerator.backward(loss)
 
-                if clipper is not None:
+                if clipper is not None and accelerator.sync_gradients:
                     accelerator.unscale_gradients(optimizer)
                     clipper(model.parameters())
-                optimizer.step()
+
+            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
 
             # Compute training loss and accuracy
             _, predicted = torch.max(outputs, 1)  # Get the index of the max logit (predicted class)

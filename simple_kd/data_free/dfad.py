@@ -115,11 +115,11 @@ def dfad_train(accelerator: Accelerator,
                 torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
 
             if save_generator:
-                teacher_model_name = f"{save_prefix}_generator.pth" if save_prefix else "generator.pth"
-                teacher_model_savepath = save_location / teacher_model_name
-                teacher_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-                unwrapped_teacher_model = accelerator.unwrap_model(teacher_model, keep_torch_compile=False)
-                torch.save(unwrapped_teacher_model.state_dict(), teacher_model_savepath)
+                generator_name = f"{save_prefix}_generator.pth" if save_prefix else "generator.pth"
+                generator_savepath = save_location / generator_name
+                generator_savepath.parent.mkdir(parents=True, exist_ok=True)
+                unwrapped_generator = accelerator.unwrap_model(generator, keep_torch_compile=False)
+                torch.save(unwrapped_generator.state_dict(), generator_savepath)
 
             if save_history:
                 history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"

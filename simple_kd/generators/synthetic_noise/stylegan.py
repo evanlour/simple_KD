@@ -314,12 +314,14 @@ def generate_stylegan_dataset(
 
     with torch.no_grad():
         written = 0
+        samples_since_reinit = 0
         while written < n_images:
             current_batch_size = min(batch_size, n_images - written)
 
             # Periodic network re-initialization matching paper setup
-            if (written // batch_size) % (reinit_interval // batch_size) == 0:
+            if samples_since_reinit >= reinit_interval:
                 G = UntrainedStyleGAN(resolution=resolution).to(device).eval()
+                samples_since_reinit = 0
 
             # Latent parameterization: w ~ LeakyReLU(N(0, I))
             w = leak(torch.randn(current_batch_size, G.num_ws, G.w_dim, device=device))
@@ -327,7 +329,8 @@ def generate_stylegan_dataset(
 
             # Normalize and stream to disk
             mmap[written : written + current_batch_size] = batch_normalize_to_uint8(raw_img)
-            written = written + current_batch_size
+            written += current_batch_size
+            samples_since_reinit += current_batch_size
             mmap.flush()
 
 def generate_stylegan_samples(
