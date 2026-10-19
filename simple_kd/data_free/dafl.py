@@ -1,13 +1,17 @@
+import csv
 import time
+from pathlib import Path
+
 import torch
 from accelerate import Accelerator
-from .common import images_from_generator, compute_generator_metrics
-from simple_kd.utils import SimpleGradClip
-from .losses import DAFLLoss
+
 from simple_kd.losses import KDLoss
 from simple_kd.training import evaluate_model
-from pathlib import Path
-import csv
+from simple_kd.utils import SimpleGradClip
+
+from .common import compute_generator_metrics, images_from_generator
+from .losses import DAFLLoss
+
 
 def dafl_train(accelerator: Accelerator,
                student_model: torch.nn.Module,
@@ -37,7 +41,62 @@ def dafl_train(accelerator: Accelerator,
                save_student_model: bool = True,
                save_generator: bool = False,
                save_history: bool = True) -> dict:
+    """Trains a student model and generator using Data-Free Learning (DAFL).
 
+    DAFL trains a generator to synthesize pseudo-data directly from a pre-trained teacher
+    using three intrinsic losses, without requiring original data or real images:
+    - Feature activation loss: Maximizes the intermediate layer activations of the teacher.
+    - One-hot loss: Encourages confident, peaky class predictions for each image.
+    - Information entropy loss: Maximizes the Shannon entropy across batch-averaged predictions,
+      ensuring equal class distribution and preventing mode collapse.
+
+    Concurrently, the student model is trained via Knowledge Distillation (KDLoss) to match
+    the teacher's output distributions on these synthesized images in unified training steps.
+
+    The original paper can be found at https://arxiv.org/pdf/1904.01186 (Chen et al., ICCV 2019).
+    The original code implementation can be found at: https://github.com/autogyro/DAFL.
+
+    Args:
+        accelerator (Accelerator): The HuggingFace Accelerator instance.
+        student_model (torch.nn.Module): The student model being trained.
+        teacher_model (torch.nn.Module): The pre-trained frozen teacher model.
+        generator (torch.nn.Module): Generative network mapping latent noise vectors to synthetic images.
+        augmentations (torch.nn.Module): On-device augmentations and normalizations applied to generated images.
+        student_optimizer (torch.optim.Optimizer): Optimizer for student model weights.
+        generator_optimizer (torch.optim.Optimizer): Optimizer for generator network weights.
+        epochs (int): Total number of training epochs.
+        batch_size (int): Batch size of synthetic images generated per step.
+        generator_latent_size (int): Dimensionality of the input latent noise vector z.
+        steps_per_epoch (int, optional): Number of unified training steps per epoch. Defaults to 50.
+        print_frequency (int, optional): Frequency (in epochs) to print progress to console. Defaults to 10.
+        feature_gamma (float, optional): Multiplier for teacher feature activation loss. Defaults to 1.0.
+        one_hot_gamma (float, optional): Multiplier for one-hot cross-entropy loss. Defaults to 1.0.
+        info_entropy_gamma (float, optional): Multiplier for batch information entropy loss. Defaults to 128.0.
+        kd_T (float, optional): Distillation temperature for student KDLoss. Defaults to 4.0.
+        kd_gamma (float, optional): Multiplier for student KDLoss. Defaults to 1.0.
+        validation_frequency (int, optional): Frequency (in epochs) to run validation evaluation. Defaults to 50.
+        scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for student. Defaults to None.
+        generator_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for generator. Defaults to None.
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Intermediate teacher activation hooks. Defaults to [].
+        clipper (SimpleGradClip, optional): Gradient clipping utility applied before optimizer steps. Defaults to None.
+        validation_metrics (dict, optional): Dictionary with validation images, labels, augs, and classes. Defaults to None.
+        save_location (Path, optional): Directory where checkpoints and history CSV will be stored. Defaults to None.
+        save_prefix (str, optional): Prefix for saved artifact filenames. Defaults to "".
+        save_student_model (bool, optional): Whether to save student model checkpoint. Defaults to True.
+        save_generator (bool, optional): Whether to save generator checkpoint. Defaults to False.
+        save_history (bool, optional): Whether to save metrics history to CSV. Defaults to True.
+
+    Returns:
+        dict: Training history containing per-epoch metric lists:
+            - "student_loss": Mean student KD loss per epoch.
+            - "generator_loss": Mean generator DAFL loss per epoch.
+            - "student_lr": Student optimizer learning rate per epoch.
+            - "generator_lr": Generator optimizer learning rate per epoch.
+            - "gen_conf": Mean confidence (max probability) of teacher on generator images.
+            - "gen_entropy": Mean normalized class diversity entropy across batches.
+            - "gen_spread": Mean spatial pixel standard deviation of generated images.
+            - "epoch_time": Total elapsed time in seconds per epoch.
+    """
     criterion = KDLoss(T=kd_T, gamma=kd_gamma).to(accelerator.device)
     generator_criterion = DAFLLoss(
         feature_gamma=feature_gamma,

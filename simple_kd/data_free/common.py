@@ -1,10 +1,21 @@
+import inspect
+
 import torch
 from accelerate import Accelerator
-import inspect
+
 from simple_kd.utils import SimpleGradClip
 
+
 def _filter_kwargs_for_callable(fn, kwargs: dict) -> dict:
-    """Passes only kwargs that fn's signature actually accepts, ignoring None."""
+    """Passes only kwargs that fn's signature actually accepts, ignoring None.
+
+    Args:
+        fn (callable): A callable or PyTorch Module whose signature will be inspected.
+        kwargs (dict): Dictionary of candidate keyword arguments.
+
+    Returns:
+        dict: Filtered dictionary containing only arguments accepted by fn.
+    """
     target = getattr(fn, "forward", fn)
     sig = inspect.signature(target)
     valid_names = set(sig.parameters.keys())
@@ -14,8 +25,20 @@ def _filter_kwargs_for_callable(fn, kwargs: dict) -> dict:
     }
 
 def compute_generator_metrics(images: torch.Tensor, teacher_logits: torch.Tensor) -> dict:
-    """
-    Computes quality, diversity, and spread metrics directly from existing step tensors.
+    """Computes quality, diversity, and spread metrics directly from step tensors.
+
+    Args:
+        images (torch.Tensor): Batch of synthetic images produced by the generator.
+        teacher_logits (torch.Tensor): Teacher model logits evaluated on the synthetic images.
+
+    Returns:
+        dict: A dictionary containing:
+            - "gen_conf" (float): Mean maximum softmax probability across the batch, indicating
+              semantic fidelity / categorical sharpness (Ideal: > 0.70).
+            - "gen_entropy" (float): Batch-level Shannon entropy normalized by log(num_classes),
+              measuring categorical diversity across classes (Ideal: 0.70 - 0.95).
+            - "gen_spread" (float): Spatial pixel standard deviation, ruling out flat gray or
+              checkerboard generator collapse (Ideal: > 0.15).
     """
     with torch.no_grad():
         probs = torch.softmax(teacher_logits, dim=-1)
@@ -41,7 +64,21 @@ def images_from_generator(generator: torch.nn.Module,
                           device: torch.device,
                           batch_size: int,
                           generator_latent_size: int,
-                          requires_grad: bool=False):
+                          requires_grad: bool=False) -> torch.Tensor:
+    """Generates a batch of synthetic images from random Gaussian latent vectors.
+
+    Args:
+        generator (torch.nn.Module): The generative model mapping latent noise to images.
+        augmentations (torch.nn.Module): On-device augmentations/normalizations applied to images.
+        device (torch.device): Device where latent vectors and computations reside.
+        batch_size (int): Number of synthetic images to generate.
+        generator_latent_size (int): Dimensionality of the input latent noise vector.
+        requires_grad (bool, optional): If True, retains gradients for generator optimization.
+            If False, executes under torch.no_grad(). Defaults to False.
+
+    Returns:
+        torch.Tensor: Batch of augmented synthetic images ready for model consumption.
+    """
     z = torch.randn(batch_size, generator_latent_size, device=device)
     if requires_grad:
         generator.train()
@@ -65,8 +102,29 @@ def train_model_with_generator(accelerator: Accelerator,
                                 student_optimizer: torch.optim.Optimizer,
                                 student_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
                                 teacher_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
-                                clipper: SimpleGradClip | None = None,):
+                                clipper: SimpleGradClip | None = None,) -> tuple[torch.Tensor, dict]:
+    """Executes a single optimization step for the student model using generator images.
 
+    Evaluates the student on synthetic images, gathers teacher outputs under no_grad,
+    computes generator quality metrics, evaluates distillation criterion, and updates student weights.
+
+    Args:
+        accelerator (Accelerator): The HuggingFace Accelerator instance.
+        images (torch.Tensor): Synthetic images batch produced by the generator.
+        student_model (torch.nn.Module): Student model being trained.
+        teacher_model (torch.nn.Module): Pre-trained teacher model providing distillation targets.
+        generator (torch.nn.Module): Generator model (placed in eval mode).
+        criterion (torch.nn.Module): Student distillation loss criterion (e.g. DFADLoss, KDLoss).
+        student_optimizer (torch.optim.Optimizer): Optimizer for student model parameters.
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Student intermediate stage activations. Defaults to [].
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Teacher intermediate stage activations. Defaults to [].
+        clipper (SimpleGradClip, optional): Optional gradient clipping utility. Defaults to None.
+
+    Returns:
+        tuple[torch.Tensor, dict]: Tuple containing:
+            - train_loss (torch.Tensor): The scalar loss tensor computed by criterion.
+            - generator_statistics (dict): Dictionary of generator metrics (conf, entropy, spread).
+    """
     train_loss = torch.tensor(0.0, device=accelerator.device)
     generator.eval()
     student_model.train()
@@ -102,8 +160,27 @@ def train_generator(accelerator: Accelerator,
                                 generator_optimizer: torch.optim.Optimizer,
                                 student_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
                                 teacher_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
-                                clipper: SimpleGradClip | None = None,):
+                                clipper: SimpleGradClip | None = None,) -> torch.Tensor:
+    """Executes a single optimization step for the generator.
 
+    Feeds synthetic images through student and teacher models, calculates the adversarial
+    discrepancy loss, and backpropagates gradients into the generator.
+
+    Args:
+        accelerator (Accelerator): The HuggingFace Accelerator instance.
+        images (torch.Tensor): Synthetic images with requires_grad=True connected to the generator.
+        student_model (torch.nn.Module): Student model (placed in eval mode).
+        teacher_model (torch.nn.Module): Pre-trained teacher model.
+        generator (torch.nn.Module): Generator model being optimized.
+        criterion (torch.nn.Module): Generator loss criterion (e.g. inverted DFADLoss).
+        generator_optimizer (torch.optim.Optimizer): Optimizer for generator parameters.
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Student intermediate stage activations. Defaults to [].
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Teacher intermediate stage activations. Defaults to [].
+        clipper (SimpleGradClip, optional): Optional gradient clipping utility. Defaults to None.
+
+    Returns:
+        torch.Tensor: The scalar generator loss tensor.
+    """
     train_loss = torch.tensor(0.0, device=accelerator.device)
     generator.train()
     student_model.eval()

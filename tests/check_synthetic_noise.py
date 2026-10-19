@@ -1,11 +1,18 @@
-from simple_kd.generators.synthetic_noise import dead_leaves, generate_feature_samples, generate_feature_combinations, generate_statistical_sample
 import os
+
 import cv2
 import torch
-import torchvision.models as models
+from torchvision import models
+from torchvision.utils import save_image
+
+from simple_kd.generators.synthetic_noise import (
+    dead_leaves,
+    generate_feature_combinations,
+    generate_feature_samples,
+    generate_statistical_sample,
+)
 from simple_kd.generators.synthetic_noise.stylegan import generate_stylegan_samples
 from simple_kd.utils import apply_hooks
-from torchvision.utils import save_image
 
 if __name__ == "__main__":
     os.makedirs("./tests/images", exist_ok=True)

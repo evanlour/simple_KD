@@ -1,5 +1,6 @@
 import torch
 
+
 def dfad_loss(student_output: torch.Tensor, teacher_output: torch.Tensor) -> torch.Tensor:
     """ Code implementation of the loss of the Data Free Adversarial Distillation (DFAD) method.
 

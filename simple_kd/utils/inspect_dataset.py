@@ -1,5 +1,6 @@
 import hashlib
 from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,6 +10,16 @@ def inspect_dataset(
     raw_shape: tuple | None = None,
     num_display: int = 10,
 ):
+    """Inspects a dataset file, printing statistics (shape, intensity, duplicate hash count) and displaying sample images.
+
+    Args:
+        filepath (str | Path): Path to the dataset file (.npy or raw binary memmap).
+        raw_shape (tuple, optional): Required shape (N, H, W, C) if reading a raw binary file without .npy headers. Defaults to None.
+        num_display (int, optional): Number of evenly spaced sample images to plot using matplotlib. Defaults to 10.
+
+    Raises:
+        ValueError: If loading a raw memmap without raw_shape.
+    """
     path = Path(filepath)
 
     try:

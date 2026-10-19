@@ -1,11 +1,21 @@
-import torch
-import torch.utils.benchmark as benchmark
-from accelerate import Accelerator
 import inspect
 
-from simple_kd.losses.functional import at_loss, dkd_loss, kd_loss, pkt_loss, rkd_angle_loss, rkd_dist_loss, skeptical_loss, sp_loss, ssp_loss
-from simple_kd.losses import SkepticalClassifier
+import torch
+from accelerate import Accelerator
+from torch.utils import benchmark
 
+from simple_kd.losses import SkepticalClassifier
+from simple_kd.losses.functional import (
+    at_loss,
+    dkd_loss,
+    kd_loss,
+    pkt_loss,
+    rkd_angle_loss,
+    rkd_dist_loss,
+    skeptical_loss,
+    sp_loss,
+    ssp_loss,
+)
 
 KD_FUNCTIONS = {
     "KD":  kd_loss,

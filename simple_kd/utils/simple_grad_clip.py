@@ -47,6 +47,28 @@ def _adaptive_clip_grad(parameters, clip_factor: float = 0.01, eps: float = 1e-3
         p.grad.detach().copy_(new_grads)
 
 class SimpleGradClip:
+    """Wrapper class providing gradient clipping strategies (value, norm, and AGC).
+
+    Supports:
+    - "value": Elementwise gradient value clipping via torch.nn.utils.clip_grad_value_.
+    - "norm": Total gradient norm clipping via torch.nn.utils.clip_grad_norm_.
+    - "agc": Adaptive Gradient Clipping (Brock et al., 2021) adapted from timm.
+
+    Code implementation for the Adaptive Gradient Clipping is from https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py.
+
+    Args:
+        clip_type (str, optional): Clipping strategy. One of "value", "norm", or "agc". Defaults to "value".
+        clip_value (float, optional): Maximum clip value (used as max_value for value clipping and max_norm for norm clipping). Defaults to 2.0.
+        norm_type (float, optional): Norm type used for norm clipping and AGC. Defaults to 2.0.
+        clip_factor (float, optional): Clipping threshold factor for AGC (ratio of grad norm to param norm). Defaults to 0.02.
+        eps (float, optional): Epsilon floor to prevent zero-norm division in AGC. Defaults to 1e-3.
+        error_if_nonfinite (bool, optional): If True, raises error if total norm is NaN/inf. Defaults to False.
+        foreach (bool, optional): Use faster foreach implementation in PyTorch if available. Defaults to False.
+        ignore_1D (bool, optional): If True, skips 1D parameters (biases, batchnorm weights) in AGC. Defaults to False.
+
+    Raises:
+        ValueError: If an unsupported clip_type is specified.
+    """
     def __init__(self,
                 clip_type: str = "value",
                 clip_value: float = 2.0,
@@ -56,20 +78,6 @@ class SimpleGradClip:
                 error_if_nonfinite: bool = False,
                 foreach: bool = False,
                 ignore_1D: bool = False):
-        """This is a simple wrapper class for gradient clipping.
-
-        Args:
-            clip_type (str, optional): Accepts "value" and "norm" from pytorch, along with "agc" supplied from the timm repository. Defaults to "value".
-            clip_value (float, optional): The clip value, used as is for value clipping and as max_norm for norm clipping. Defaults to 2.0.
-            norm_type (float, optional): The norm type for the gradient norm and agc methods. Defaults to 2.0.
-            clip_factor (float, optional): The clip factor used by the agc method, ignored otherwise. Defaults to 0.02.
-            eps (float, optional): The eps valued used by the agc method, ignored otherwise. Defaults to 1e-3.
-            error_if_nonfinite (bool, optional): Toggle error for the gradient norm method. Defaults to False.
-            foreach (bool, optional): Toggle for method use for the gradient norm and value methods. Defaults to None.
-
-        Raises:
-            Exception: _description_
-        """
         super().__init__()
         if clip_type == "value":
             self.inner_fn = torch.nn.utils.clip_grad_value_
@@ -94,7 +102,15 @@ class SimpleGradClip:
                 "ignore_1D": ignore_1D
             }
         else:
-            raise Exception("Non Valid method selected.")
+            raise ValueError(f"Invalid clip_type: '{clip_type}'. Supported: 'value', 'norm', 'agc'.")
 
-    def __call__(self, x):
-        return self.inner_fn(x, **self.gradient_params)
+    def __call__(self, parameters) -> torch.Tensor | None:
+        """Applies gradient clipping in-place to the given parameters.
+
+        Args:
+            parameters (Iterable[Tensor] or Tensor): Model parameters whose .grad attributes will be clipped.
+
+        Returns:
+            torch.Tensor or None: Total norm of parameters if norm clipping is used, else None.
+        """
+        return self.inner_fn(parameters, **self.gradient_params)

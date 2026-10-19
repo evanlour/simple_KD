@@ -4,6 +4,12 @@ import torch
 
 
 class FeatureSelector:
+    """An interactive terminal UI using curses to select intermediate layer names from a model.
+
+    Args:
+        options (list[str]): List of candidate layer or node names from the model.
+        title (str, optional): Terminal header title. Defaults to "Select the intermediate layers of your model".
+    """
     def __init__(self, options: list[str], title: str = "Select the intermediate layers of your model"):
         self.title = title
         self.options = options
@@ -61,10 +67,26 @@ class FeatureSelector:
             elif key in (ord("q"), ord("Q")):
                 return
 
-    def extract(self):
+    def extract(self) -> list[str] | None:
+        """Launches the curses interactive selector in the terminal.
+
+        Returns:
+            list[str] | None: List of selected layer names, or None if aborted.
+        """
         return curses.wrapper(self._loop)
 
 def apply_hooks(model: torch.nn.Module, layers: list[str] | tuple[str, ...], detach: bool=False) -> list[torch.Tensor]:
+    """Registers forward hooks on model submodules to extract intermediate activations.
+
+    Args:
+        model (torch.nn.Module): The model containing submodules to hook.
+        layers (list[str] | tuple[str, ...]): Submodule names to attach hooks to (e.g. ['layer1', 'layer2']).
+        detach (bool, optional): If True, detaches the activation tensor from the computation graph.
+            If False, retains the autograd computation graph for backward passes. Defaults to False.
+
+    Returns:
+        list[torch.Tensor]: A mutable list of tensors that are updated in-place during each forward pass.
+    """
     features = [torch.empty(0) for _ in layers]
 
     for i, layer in enumerate(layers):
