@@ -2,17 +2,49 @@
 Credits to the author there!
 """
 
-import numpy as np
 import multiprocessing as mp
 from pathlib import Path
-import cv2
 
-def dead_leaves(res: int,
+import cv2
+import numpy as np
+
+
+def dead_leaves(
+    res: int,
     channels: int,
     sigma: int = 3,
-    shape_mode: str='mixed',
-    max_iters: int=5000,
-    rmin: float = 0.03) -> np.ndarray:
+    shape_mode: str = "mixed",
+    max_iters: int = 5000,
+    rmin: float = 0.03,
+) -> np.ndarray:
+    """Generates a synthetic image using the Dead Leaves stochastic occlusion model.
+
+    The Dead Leaves model places random geometric shapes of random scales and colors
+    onto an image canvas until full coverage is reached. The scale distribution follows
+    a power law r^(-sigma), producing scale-invariant natural image statistics (power
+    spectrum proportional to 1/f^2).
+
+    References:
+        - M. Baradad et al., "Learning to See by Looking at Noise", NeurIPS 2021, https://arxiv.org/pdf/2106.05963.
+        - Source: https://github.com/mbaradad/learning_with_noise
+
+    Args:
+        res (int): Resolution (height and width) of the square image.
+        channels (int): Number of color channels (e.g., 1 for grayscale, 3 for RGB).
+        sigma (int, optional): Power-law scaling exponent for object radius distribution.
+            Defaults to 3.
+        shape_mode (str, optional): Shape geometry to render ('circle', 'square',
+            'oriented_square', 'rectangle', 'triangle', 'quadrilater', or 'mixed').
+            Defaults to 'mixed'.
+        max_iters (int, optional): Maximum number of shapes to draw before terminating.
+            Defaults to 5000.
+        rmin (float, optional): Minimum relative radius of leaf shapes as a fraction of
+            resolution. Defaults to 0.03.
+
+    Returns:
+        np.ndarray: Generated image of shape (channels, res, res) with values in [0, 255]
+            as uint8.
+    """
 
     img = np.zeros((res, res, channels), dtype=np.uint8)
     mask = np.zeros((res, res), dtype=np.uint8)  # Single-channel coverage tracker
@@ -63,13 +95,51 @@ def dead_leaves(res: int,
     img = img.transpose((2,0,1))
     return np.clip(img, 0, 255)
 
-def worker(args):
+def worker(args: tuple[int, int, int, int]) -> tuple[int, np.ndarray]:
+    """Multiprocessing worker function for dead leaves image generation.
+
+    Args:
+        args (tuple): Tuple containing (idx, resolution, channels, sigma).
+
+    Returns:
+        tuple[int, np.ndarray]: Tuple of (index, generated_image).
+    """
     idx, resolution, channels, sigma = args
     np.random.seed(idx)
     img = dead_leaves(res=resolution, sigma=sigma, channels=channels)
     return idx, img
 
-def generate_dead_leaves_dataset(res: int, channels: int, savepath: Path, save_prefix: str = "", parallel_workers: int=3, samples: int=50000, sigma: int=3):
+def generate_dead_leaves_dataset(
+    res: int,
+    channels: int,
+    savepath: Path,
+    save_prefix: str = "",
+    parallel_workers: int = 3,
+    samples: int = 50000,
+    sigma: int = 3,
+) -> None:
+    """Generates and saves a full dataset of Dead Leaves synthetic images as a .npy file.
+
+    Utilizes a multiprocessing pool with `imap_unordered` to parallelize image rendering
+    across worker processes, writing the combined dataset of shape (samples, res, res, channels)
+    to disk.
+
+    Args:
+        res (int): Resolution (height and width) of the square images.
+        channels (int): Number of color channels (e.g., 3 for RGB, 1 for grayscale).
+        savepath (Path): Directory where the output numpy array should be saved.
+        save_prefix (str, optional): Optional prefix prepended to the filename
+            (e.g., '{save_prefix}_dead_leaves.npy'). Defaults to "".
+        parallel_workers (int, optional): Number of concurrent worker processes.
+            Defaults to 3.
+        samples (int, optional): Total number of synthetic images to generate.
+            Defaults to 50000.
+        sigma (int, optional): Power-law scaling exponent for object radius distribution.
+            Defaults to 3.
+
+    Returns:
+        None
+    """
 
     dataset_name = f"{save_prefix}_dead_leaves.npy" if save_prefix else "dead_leaves.npy"
     dataset_savepath = savepath / dataset_name

@@ -1,9 +1,22 @@
-import torch
-import torch.nn.functional as F
-import numpy as np
 from pathlib import Path
 
-def colorPCA(ref_image: torch.Tensor):
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+
+def colorPCA(ref_image: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Computes spatial color Principal Component Analysis (PCA) to decorrelate color channels.
+
+    Args:
+        ref_image (torch.Tensor): Reference color image tensor of shape (B, C, H, W).
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            - decor (torch.Tensor): Decorrelated image of shape (B, C, H, W).
+            - colorPC (torch.Tensor): Principal component eigenvector matrix of shape (B, C, C).
+            - meanColor (torch.Tensor): Mean color vector of shape (B, C, 1, 1).
+    """
     B, C, H, W = ref_image.shape
     flat = ref_image.view(B, C, -1)
     meanColor = flat.mean(dim=-1, keepdim=True)
@@ -13,12 +26,35 @@ def colorPCA(ref_image: torch.Tensor):
     decor = torch.bmm(colorPC.transpose(1, 2), centered)
     return decor.view(B, C, H, W), colorPC, meanColor.view(B, C, 1, 1)
 
-def inv_colorPCA(decor_image: torch.Tensor, colorPC: torch.Tensor, meanColor: torch.Tensor):
+def inv_colorPCA(decor_image: torch.Tensor, colorPC: torch.Tensor, meanColor: torch.Tensor) -> torch.Tensor:
+    """Inverts PCA color transformation to restore correlated color channels.
+
+    Args:
+        decor_image (torch.Tensor): Decorrelated image tensor of shape (B, C, H, W).
+        colorPC (torch.Tensor): Principal component transformation matrix of shape (B, C, C).
+        meanColor (torch.Tensor): Mean color vector of shape (B, C, 1, 1).
+
+    Returns:
+        torch.Tensor: Reconstructed correlated image of shape (B, C, H, W).
+    """
     B, C, H, W = decor_image.shape
     rec = torch.bmm(colorPC, decor_image.view(B, C, -1))
     return rec.view(B, C, H, W) + meanColor
 
-def sample_colormodel(B: int, resolution: int, device: torch.device):
+def sample_colormodel(B: int, resolution: int, device: torch.device) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Samples a smooth low-frequency color model and returns its PCA basis.
+
+    Args:
+        B (int): Batch size.
+        resolution (int): Target spatial resolution (height and width).
+        device (torch.device): Computing device.
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            - ref_decor (torch.Tensor): Decorrelated reference template of shape (B, 3, resolution, resolution).
+            - colorPC (torch.Tensor): Color eigenvector matrix of shape (B, 3, 3).
+            - meanColor (torch.Tensor): Mean color vector of shape (B, 3, 1, 1).
+    """
     coarse_res = torch.randint(3, 8, (1,)).item()
     coarse_colors = torch.rand(B, 3, coarse_res, coarse_res, device=device) # type: ignore
     ref = F.interpolate(coarse_colors, size=(resolution, resolution), mode='bilinear', align_corners=False)
@@ -26,9 +62,18 @@ def sample_colormodel(B: int, resolution: int, device: torch.device):
     return colorPCA(ref)
 
 def match_cumulative_cdf(source: torch.Tensor, target_reference: torch.Tensor) -> torch.Tensor:
-    """
-    Return modified source array so that the cumulative density function of
-    its values matches the cumulative density function of the template.
+    """Modifies source tensor so that its empirical CDF matches target reference CDF.
+
+    Performs exact 1D histogram matching via sorted inverse-transform sampling along
+    the flattened spatial dimension for each batch and channel independently.
+
+    Args:
+        source (torch.Tensor): Input source tensor of shape (B, C, H, W).
+        target_reference (torch.Tensor): Reference distribution values tensor of shape
+            (B, C, M) or compatible flattened shape.
+
+    Returns:
+        torch.Tensor: Source tensor histogram-matched to the target CDF of shape (B, C, H, W).
     """
     B, C, H, W = source.shape
     N = H * W
@@ -52,7 +97,24 @@ def match_cumulative_cdf(source: torch.Tensor, target_reference: torch.Tensor) -
     matched.scatter_(-1, src_indices, interpolated)
     return matched.view(B, C, H, W)
 
-def sample_1f_spectrum(B: int, resolution: int, slope_range=(0.5, 3.5), device: torch.device = torch.device('cpu')) -> torch.Tensor:
+def sample_1f_spectrum(
+    B: int,
+    resolution: int,
+    slope_range: tuple[float, float] = (0.5, 3.5),
+    device: torch.device = torch.device('cpu'),
+) -> torch.Tensor:
+    """Samples random 2D anisotropic 1/f^s power spectrum magnitude templates.
+
+    Args:
+        B (int): Batch size.
+        resolution (int): Image resolution (height and width).
+        slope_range (tuple[float, float], optional): Range (min, max) for radial decay slope.
+            Defaults to (0.5, 3.5).
+        device (torch.device, optional): Device for generated tensors. Defaults to CPU.
+
+    Returns:
+        torch.Tensor: 2D Fourier magnitude template of shape (B, 1, resolution, resolution).
+    """
     H = W = resolution
     s0, s1 = slope_range
     s = torch.empty(B, 1, 1, 1, device=device).uniform_(s0, s1)
@@ -67,7 +129,18 @@ def sample_1f_spectrum(B: int, resolution: int, slope_range=(0.5, 3.5), device: 
     magnitude[:, :, 0, 0] = 0.0
     return magnitude
 
-def impose_spectrum(x: torch.Tensor, target_magnitude: torch.Tensor, eps: float=1e-8) -> torch.Tensor:
+def impose_spectrum(x: torch.Tensor, target_magnitude: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+    """Replaces Fourier magnitude spectrum of an image while preserving its phase.
+
+    Args:
+        x (torch.Tensor): Spatial domain image tensor of shape (B, C, H, W).
+        target_magnitude (torch.Tensor): Target 2D Fourier magnitude spectrum of shape (B, 1, H, W).
+        eps (float, optional): Epsilon for numerical stability in standard deviation.
+            Defaults to 1e-8.
+
+    Returns:
+        torch.Tensor: Spectrum-imposed image tensor matching original spatial mean and variance.
+    """
     mean = x.mean(dim=(-2, -1), keepdim=True)
     std = x.std(dim=(-2, -1), keepdim=True) + eps
 
@@ -81,6 +154,19 @@ def impose_spectrum(x: torch.Tensor, target_magnitude: torch.Tensor, eps: float=
     return (out - out_mean) / out_std * std + mean
 
 def impose_wmm(x: torch.Tensor, filters: torch.Tensor, target_subbands: torch.Tensor) -> torch.Tensor:
+    """Imposes Wavelet Marginal Matching (WMM) using a steerable pyramid filter bank.
+
+    Filters the image into oriented multiscale subbands, matches each subband's empirical
+    marginal CDF to the target distribution, and reconstructs the image.
+
+    Args:
+        x (torch.Tensor): Image tensor of shape (B, C, H, W).
+        filters (torch.Tensor): Steerable pyramid frequency filter bank of shape (F, H, W).
+        target_subbands (torch.Tensor): Target subband marginal values of shape (B, F, N).
+
+    Returns:
+        torch.Tensor: Reconstructed image tensor with matched wavelet marginals of shape (B, C, H, W).
+    """
     B, C, H, W = x.shape
     F_num = filters.shape[0]
 
@@ -100,7 +186,21 @@ def impose_wmm(x: torch.Tensor, filters: torch.Tensor, target_subbands: torch.Te
     fft_matched = torch.fft.fft2(matched_coeffs)
     return torch.sum(torch.fft.ifft2(fft_matched * filt).real, dim=2)
 
-def sample_wmm_model(B: int, num_filters: int, resolution: int, device: torch.device):
+def sample_wmm_model(B: int, num_filters: int, resolution: int, device: torch.device) -> torch.Tensor:
+    """Samples Generalized Gaussian Distribution (GGD) marginal targets for wavelet subbands.
+
+    Uses Gamma variate transformation to sample heavy-tailed distributions characteristic
+    of multiscale wavelet coefficients in natural scene statistics.
+
+    Args:
+        B (int): Batch size.
+        num_filters (int): Number of subband filters in the steerable pyramid.
+        resolution (int): Image spatial resolution (height and width).
+        device (torch.device): Target device.
+
+    Returns:
+        torch.Tensor: Target subband coefficient samples of shape (B, num_filters, resolution * resolution).
+    """
     N = resolution * resolution
     r = torch.empty(B, num_filters, 1, device=device).uniform_(0.4, 0.8)
     s = torch.empty(B, num_filters, 1, device=device).uniform_(1.0, 16.0)
@@ -112,7 +212,26 @@ def sample_wmm_model(B: int, num_filters: int, resolution: int, device: torch.de
     sign = torch.where(torch.rand(B, num_filters, N, device=device) < 0.5, -1.0, 1.0)
     return sign * s * (g ** (1.0 / r))
 
-def build_steerable_filters(resolution: int, num_scales: int = 3, num_orientations: int = 4, device: torch.device = torch.device('cpu')):
+def build_steerable_filters(
+    resolution: int,
+    num_scales: int = 3,
+    num_orientations: int = 4,
+    device: torch.device = torch.device('cpu'),
+) -> torch.Tensor:
+    """Constructs frequency-domain Simoncelli steerable pyramid filter bank.
+
+    Decomposes an image into high-pass, multi-scale oriented band-pass, and low-pass
+    subbands satisfying tight-frame self-inversion properties.
+
+    Args:
+        resolution (int): Image resolution (height and width).
+        num_scales (int, optional): Number of octave radial decomposition scales. Defaults to 3.
+        num_orientations (int, optional): Number of directional orientation angles. Defaults to 4.
+        device (torch.device, optional): Device on which filter tensors are constructed. Defaults to CPU.
+
+    Returns:
+        torch.Tensor: Steerable filter stack tensor of shape (num_filters, resolution, resolution).
+    """
     H = W = resolution
     fy = torch.fft.fftfreq(H, device=device).view(H, 1)
     fx = torch.fft.fftfreq(W, device=device).view(1, W)
@@ -150,8 +269,31 @@ def generate_statistical_sample(
     impose_wmm_flag: bool = True,
     impose_color_flag: bool = True,
     correlate_channels: bool = True,
-    device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
 ) -> torch.Tensor:
+    """Synthesizes a batch of statistical noise images by iterative constraint satisfaction.
+
+    Starting from Gaussian white noise, iteratively imposes 1/f power spectral slope,
+    wavelet marginal matching (Simoncelli steerable pyramid subbands), and empirical
+    color distribution matching via alternating projections.
+
+    Args:
+        B (int): Batch size of synthetic images.
+        resolution (int, optional): Image spatial resolution (height and width). Defaults to 128.
+        filters (torch.Tensor, optional): Precomputed steerable pyramid filter bank. If None,
+            constructed automatically. Defaults to None.
+        n_iter (int, optional): Number of alternating projection iterations. Defaults to 10.
+        impose_spectrum_flag (bool, optional): Whether to impose 1/f Fourier magnitude. Defaults to True.
+        impose_wmm_flag (bool, optional): Whether to impose Wavelet Marginal Matching. Defaults to True.
+        impose_color_flag (bool, optional): Whether to impose color CDF matching. Defaults to True.
+        correlate_channels (bool, optional): Whether to re-correlate color channels using inverse PCA.
+            Defaults to True.
+        device (torch.device, optional): Device for tensor computations. Defaults to CUDA if available.
+
+    Returns:
+        torch.Tensor: Generated synthetic images of shape (B, 3, resolution, resolution) as uint8
+            in range [0, 255].
+    """
     if filters is None and impose_wmm_flag:
         filters = build_steerable_filters(resolution, device=device)
 
@@ -190,8 +332,29 @@ def generate_statistical_dataset(
     impose_wmm_flag: bool = True,
     impose_color_flag: bool = True,
     correlate_channels: bool = True,
-    save_prefix: str = ""
-):
+    save_prefix: str = "",
+) -> None:
+    """Generates and streams a full dataset of statistical noise images directly to disk.
+
+    Creates an open_memmap numpy array at '{savepath}/{save_prefix}_statistical.npy'
+    with shape (total_samples, resolution, resolution, 3) and fills it batch-by-batch.
+
+    Args:
+        device (torch.device): Device on which generation computations are run.
+        savepath (Path): Directory where output array file will be saved.
+        total_samples (int, optional): Total number of synthetic images to generate. Defaults to 512.
+        batch_size (int, optional): Batch size per iteration pass. Defaults to 32.
+        resolution (int, optional): Spatial resolution of images. Defaults to 128.
+        n_iter (int, optional): Number of alternating projection iterations per batch. Defaults to 10.
+        impose_spectrum_flag (bool, optional): Whether to enforce 1/f spectrum. Defaults to True.
+        impose_wmm_flag (bool, optional): Whether to enforce wavelet marginals. Defaults to True.
+        impose_color_flag (bool, optional): Whether to enforce color matching. Defaults to True.
+        correlate_channels (bool, optional): Whether to correlate color channels. Defaults to True.
+        save_prefix (str, optional): Optional filename prefix. Defaults to "".
+
+    Returns:
+        None
+    """
 
     dataset_name = f"{save_prefix}_statistical.npy" if save_prefix else "statistical.npy"
     dataset_savepath = savepath / dataset_name

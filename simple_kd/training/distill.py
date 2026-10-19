@@ -1,10 +1,13 @@
 import csv
 import inspect
 import time
+from pathlib import Path
+
 import torch
 from accelerate import Accelerator
+
 from simple_kd.utils import SimpleGradClip
-from pathlib import Path
+
 
 def _filter_kwargs_for_callable(fn, kwargs: dict) -> dict:
     """Passes only kwargs that fn's signature actually accepts, ignoring None."""
@@ -39,36 +42,45 @@ def distill(accelerator: Accelerator,
           save_student_model: bool = True,
           save_teacher_model: bool = False,
           save_history: bool = True) -> dict:
-    """ This function distills knowledge from a teacher model to a student model. Supports multiple options, is configured around classification tasks.
+    """Distills knowledge from a teacher model to a student model for classification tasks.
 
     Args:
-        accelerator (Accelerator): The accelerator instance.
-        teacher_model (torch.nn.Module): The model that will be used as a teacher.
-        student_model (torch.nn.Module): The model that will be used as a student.
-        train_loader (torch.utils.data.DataLoader): The train data that will be used.
-        student_optimizer (torch.optim): The optimizer that will be used for the student.
-        criterion (torch.nn.Module): The non distillation criterion that will be used for the teacher and testing, usually CrossEntropy().
-        distillation_criterion (torch.nn.Module): The function that will be used for calculating the distillation loss.
-        student_stages(list[torch.Tensor]): List of tensors that derive from forward hooks of the student model. Defaults to None.
-        teacher_stages(list[torch.Tensor]): List of tensors that derive from forward hooks of the teacher model. Defaults to None.
-        teacher_optimizer (torch.optim.Optimizer, optional): Set an optimizer if you want to train the teacher as well ONLY with criterion. Defaults to None.
-        epochs (int, optional): The number of epochs the distillation will take place. Defaults to 10.
-        epochs_per_val (int, optional): If set > 1 it will skip validation epochs, in case speed is needed. Defaults to 1.
-        clipper (SimpleGradClip, optional): If not none, clips the gradients. Defaults to None.
-        augmentations (torch.nn.Module, optional): The training augmentations. These happen on device. Defaults to None.
-        val_augmentations (torch.nn.Module, optional): The validation augmentations. These happen on device. Defaults to None.
-        teacher_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): The student learning rate scheduler. Called once per epoch. Defaults to None.
-        student_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): The teacher learning rate scheduler. Called once per epoch. Defaults to None.. Defaults to None.
-        val_loader (torch.utils.data.DataLoader, optional): The validation data that will be used. Defaults to None.
-        save_location (str, optional): If not none, sets the location where the history and the model will be saved. Defaults to None.
-        save_student_model (bool, optional): Dictates whether the student model will be saved. Defaults to True.
-        save_teacher_model (bool, optional): Dictates whether the teacher model will be saved. Defaults to False.
-        save_history (bool, optional): Dictates whether the history will be saved. Defaults to True.
+        accelerator (Accelerator): The HuggingFace Accelerator instance managing device placement and precision.
+        teacher_model (torch.nn.Module): The pre-trained teacher model providing supervision signals.
+        student_model (torch.nn.Module): The student model to be trained via distillation.
+        train_loader (torch.utils.data.DataLoader): The DataLoader providing training batches.
+        student_optimizer (torch.optim.Optimizer): The optimizer used for updating the student model.
+        criterion (torch.nn.Module): Task loss criterion (e.g. CrossEntropyLoss) used for hard labels.
+        distillation_criterion (torch.nn.Module): Distillation loss module (e.g. KDLoss, DKDLoss, ATLoss).
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Intermediate activation tensors from student hooks. Defaults to ().
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Intermediate activation tensors from teacher hooks. Defaults to ().
+        teacher_optimizer (torch.optim.Optimizer, optional): Optional optimizer if simultaneous fine-tuning of the teacher is desired. Defaults to None.
+        epochs (int, optional): The total number of distillation epochs. Defaults to 10.
+        epochs_per_val (int, optional): Evaluation frequency. If set > 1, skips intermediate validation epochs for speed. Defaults to 1.
+        clipper (SimpleGradClip, optional): Optional gradient clipper applied to student/teacher gradients. Defaults to None.
+        augmentations (torch.nn.Module, optional): On-device training augmentations. Defaults to None.
+        val_augmentations (torch.nn.Module, optional): On-device validation augmentations. Defaults to None.
+        teacher_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for the teacher optimizer. Defaults to None.
+        student_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for the student optimizer. Defaults to None.
+        val_loader (torch.utils.data.DataLoader, optional): The DataLoader providing validation batches. Defaults to None.
+        save_location (Path, optional): Directory path where checkpoints and history CSV will be saved. Defaults to None.
+        save_prefix (str, optional): Optional prefix prepended to saved checkpoint and history filenames. Defaults to "".
+        save_student_model (bool, optional): Whether to save the unwrapped student model checkpoint. Defaults to True.
+        save_teacher_model (bool, optional): Whether to save the unwrapped teacher model checkpoint. Defaults to False.
+        save_history (bool, optional): Whether to save training metrics history as a CSV file. Defaults to True.
 
     Returns:
-        history(dict): Per epoch statistics around train and validation accuracy, along with the learning rate and the time of each epoch.
-
-        If on an epoch the validation step is skipped, the data written are from the previous epoch.
+        dict: A dictionary containing per-epoch metric lists:
+            - "student_train_loss": Average student distillation + task loss per epoch.
+            - "student_train_accuracy": Student training accuracy percentage per epoch.
+            - "teacher_train_loss": Teacher training loss per epoch (if teacher_optimizer provided).
+            - "teacher_train_accuracy": Teacher training accuracy percentage per epoch.
+            - "student_val_loss": Student validation loss per epoch.
+            - "student_val_accuracy": Student validation accuracy percentage per epoch.
+            - "teacher_val_loss": Teacher validation loss per epoch.
+            - "teacher_val_accuracy": Teacher validation accuracy percentage per epoch.
+            - "lr": Current student learning rate per epoch.
+            - "epoch_time": Total elapsed time in seconds per epoch.
     """
     history = {"student_train_loss": [], "student_train_accuracy": [], "teacher_train_loss": [], "teacher_train_accuracy": [],
         "student_val_loss": [], "student_val_accuracy": [], "teacher_val_loss": [], "teacher_val_accuracy": [],

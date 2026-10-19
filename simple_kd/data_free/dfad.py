@@ -1,12 +1,16 @@
+import csv
 import time
+from pathlib import Path
+
 import torch
 from accelerate import Accelerator
-from .common import images_from_generator, train_model_with_generator, train_generator
-from simple_kd.utils import SimpleGradClip
-from .losses import DFADLoss
+
 from simple_kd.training import evaluate_model
-from pathlib import Path
-import csv
+from simple_kd.utils import SimpleGradClip
+
+from .common import images_from_generator, train_generator, train_model_with_generator
+from .losses import DFADLoss
+
 
 def dfad_train(accelerator: Accelerator,
                 student_model: torch.nn.Module,
@@ -35,7 +39,57 @@ def dfad_train(accelerator: Accelerator,
                 save_student_model: bool = True,
                 save_generator: bool = False,
                 save_history: bool = True) -> dict:
+    """Trains a student model and generator using Data-Free Adversarial Distillation (DFAD).
 
+    DFAD optimizes a generator and a student model in an adversarial zero-sum game:
+    - The generator is optimized to produce difficult synthetic samples that maximize
+      the discrepancy between student and teacher predictions (sign = -1).
+    - The student is trained to minimize this discrepancy (sign = +1), effectively matching
+      the teacher across the synthesized data manifold without needing original training images.
+
+    The original paper is "Data-Free Adversarial Distillation" (Fang et al., CVPR 2020), https://arxiv.org/abs/1912.11006.
+    The original code can be found at https://github.com/VainF/Data-Free-Adversarial-Distillation.
+
+    Args:
+        accelerator (Accelerator): The HuggingFace Accelerator instance.
+        student_model (torch.nn.Module): The student model to be trained.
+        teacher_model (torch.nn.Module): The pre-trained frozen teacher model.
+        generator (torch.nn.Module): Generative network mapping latent noise vectors to synthetic images.
+        augmentations (torch.nn.Module): On-device augmentations and normalizations applied to generated images.
+        student_optimizer (torch.optim.Optimizer): Optimizer for student model weights.
+        generator_optimizer (torch.optim.Optimizer): Optimizer for generator network weights.
+        epochs (int): Total number of training epochs.
+        batch_size (int): Batch size of synthetic images per step.
+        generator_latent_size (int): Dimensionality of the input latent noise vector z.
+        steps_per_epoch (int, optional): Number of student training steps per epoch. Defaults to 50.
+        print_frequency (int, optional): Frequency (in epochs) to print progress to console. Defaults to 10.
+        model_multipler (float, optional): Multiplier/gamma for the student DFAD loss. Defaults to 1.0.
+        generator_multiplier (float, optional): Multiplier/gamma for the generator DFAD loss. Defaults to 1.0.
+        use_log1p (bool, optional): Whether to wrap the L1 loss in torch.log1p (ADA protocol). Defaults to False.
+        validation_frequency (int, optional): Frequency (in epochs) to evaluate on validation metrics. Defaults to 50.
+        scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for student. Defaults to None.
+        generator_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for generator. Defaults to None.
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Intermediate student activation hooks. Defaults to [].
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Intermediate teacher activation hooks. Defaults to [].
+        clipper (SimpleGradClip, optional): Gradient clipping utility. Defaults to None.
+        validation_metrics (dict, optional): Dictionary with validation images, labels, augs, and classes for periodic evaluation. Defaults to None.
+        save_location (Path, optional): Directory where checkpoints and history CSV will be stored. Defaults to None.
+        save_prefix (str, optional): Prefix for saved artifact filenames. Defaults to "".
+        save_student_model (bool, optional): Whether to save student model checkpoint. Defaults to True.
+        save_generator (bool, optional): Whether to save generator checkpoint. Defaults to False.
+        save_history (bool, optional): Whether to save metrics history to CSV. Defaults to True.
+
+    Returns:
+        dict: Training history containing per-epoch metric lists:
+            - "student_loss": Mean student discrepancy loss per epoch.
+            - "generator_loss": Mean generator adversarial loss per epoch.
+            - "student_lr": Student optimizer learning rate per epoch.
+            - "generator_lr": Generator optimizer learning rate per epoch.
+            - "gen_conf": Mean confidence (max probability) of teacher on generator images.
+            - "gen_entropy": Mean normalized class diversity entropy across batches.
+            - "gen_spread": Mean spatial pixel standard deviation of generated images.
+            - "epoch_time": Total elapsed time in seconds per epoch.
+    """
     criterion = DFADLoss(sign=1.0 * model_multipler, use_log1p=use_log1p).to(accelerator.device)
     generator_criterion = DFADLoss(sign=-1.0 * generator_multiplier, use_log1p=use_log1p).to(accelerator.device)
     history = {"student_loss": [], "generator_loss": [], "student_lr": [], "generator_lr": [], "gen_conf": [], "gen_entropy": [], "gen_spread": [], "epoch_time": []}

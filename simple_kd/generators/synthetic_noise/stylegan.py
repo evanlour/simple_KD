@@ -1,11 +1,26 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 from pathlib import Path
 
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+
 def build_wavelet_bank(device: torch.device = torch.device('cpu')) -> torch.Tensor:
-    """Builds the 40 fixed 3x3 oriented/wavelet filters from Section 3."""
+    """Builds a fixed bank of 40 oriented and high-frequency 3x3 wavelet filter kernels.
+
+    Constructs 16 oriented step edges (at 8 distinct angles), 16 high-frequency line filters,
+    and 8 sparse point/cross kernels, including positive and negative sign inversions.
+
+    References:
+        - M. Baradad et al., "Learning to See by Looking at Noise", NeurIPS 2021.
+
+    Args:
+        device (torch.device, optional): Target device for filter bank tensor. Defaults to CPU.
+
+    Returns:
+        torch.Tensor: Filter bank tensor of shape (40, 3, 3).
+    """
     filters = []
 
     # Oriented step edges
@@ -50,9 +65,20 @@ def generate_pink_noise(
     height: int,
     width: int,
     alpha: float | None = None,
-    device: torch.device = torch.device('cpu')
+    device: torch.device = torch.device('cpu'),
 ) -> torch.Tensor:
-    """Generates a 2D 1/f^alpha noise map with a Laplacian envelope."""
+    """Generates a 2D 1/f^alpha pink noise map with a multiscale Laplacian envelope.
+
+    Args:
+        height (int): Output noise height.
+        width (int): Output noise width.
+        alpha (float, optional): Power spectral decay exponent. If None, randomly sampled
+            uniformly in [0.5, 1.5]. Defaults to None.
+        device (torch.device, optional): Device for tensor computation. Defaults to CPU.
+
+    Returns:
+        torch.Tensor: Normalized zero-mean unit-variance 2D noise tensor of shape (height, width).
+    """
     if alpha is None:
         alpha = float(torch.empty(1).uniform_(0.5, 1.5).item())
 
@@ -82,6 +108,19 @@ def generate_pink_noise(
     return out
 
 class ModulatedConv2d(nn.Module):
+    """Style-modulated and demodulated 2D convolution layer from StyleGAN2.
+
+    Scales convolution weights by incoming per-sample style vectors (modulation) and
+    normalizes the output standard deviation to preserve unit variance (demodulation).
+
+    Args:
+        in_channels (int): Number of input feature channels.
+        out_channels (int): Number of output feature channels.
+        kernel_size (int, optional): Convolution kernel size. Defaults to 3.
+        up (bool, optional): Whether to perform 2x bilinear upsampling before convolution.
+            Defaults to False.
+    """
+
     def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3, up: bool = False):
         super().__init__()
         self.in_channels = in_channels
@@ -93,7 +132,25 @@ class ModulatedConv2d(nn.Module):
         self.weight = nn.Parameter(torch.randn(out_channels, in_channels, kernel_size, kernel_size))
         self.scale = 1.0 / np.sqrt(in_channels * (kernel_size ** 2))
 
-    def forward(self, x: torch.Tensor, styles: torch.Tensor, custom_weight: torch.Tensor | None = None, demodulate: bool = True):
+    def forward(
+        self,
+        x: torch.Tensor,
+        styles: torch.Tensor,
+        custom_weight: torch.Tensor | None = None,
+        demodulate: bool = True,
+    ) -> torch.Tensor:
+        """Applies modulated convolution to input feature tensor.
+
+        Args:
+            x (torch.Tensor): Input feature tensor of shape (B, C_in, H, W).
+            styles (torch.Tensor): Per-sample affine style vectors of shape (B, C_in).
+            custom_weight (torch.Tensor, optional): Optional override weight tensor
+                (e.g., from wavelet bank). Defaults to None.
+            demodulate (bool, optional): Whether to apply variance demodulation. Defaults to True.
+
+        Returns:
+            torch.Tensor: Convolved output feature tensor of shape (B, C_out, H_out, W_out).
+        """
         b, c, h, w = x.shape
         w_base = custom_weight if custom_weight is not None else self.weight
         w_base = w_base * self.scale
@@ -117,6 +174,16 @@ class ModulatedConv2d(nn.Module):
 
 
 class SynthesisLayer(nn.Module):
+    """StyleGAN2 synthesis sub-layer with affine style modulation and noise injection.
+
+    Args:
+        in_channels (int): Input channel dimensionality.
+        out_channels (int): Output channel dimensionality.
+        w_dim (int, optional): Latent style vector dimension. Defaults to 512.
+        resolution (int, optional): Spatial resolution of this layer. Defaults to 4.
+        up (bool, optional): Whether to apply 2x spatial upsampling. Defaults to False.
+    """
+
     def __init__(self, in_channels: int, out_channels: int, w_dim: int = 512, resolution: int = 4, up: bool = False):
         super().__init__()
         self.resolution = resolution
@@ -134,8 +201,22 @@ class SynthesisLayer(nn.Module):
         fixed_noise_map: torch.Tensor | None = None,
         wavelet_bank: torch.Tensor | None = None,
         bias_range: float = 0.0,
-        randomize_filters: bool = False
-    ):
+        randomize_filters: bool = False,
+    ) -> torch.Tensor:
+        """Executes forward synthesis pass with optional wavelet filter replacement and noise injection.
+
+        Args:
+            x (torch.Tensor): Input activation tensor of shape (B, C_in, H, W).
+            w (torch.Tensor): Latent style vector of shape (B, w_dim).
+            noise_mode (str, optional): Noise mode ('random' or 'pink_random'). Defaults to 'random'.
+            fixed_noise_map (torch.Tensor, optional): Precomputed 512x512 pink noise map for shared noise. Defaults to None.
+            wavelet_bank (torch.Tensor, optional): Wavelet filter bank tensor. Defaults to None.
+            bias_range (float, optional): Range for uniform random bias perturbation. Defaults to 0.0.
+            randomize_filters (bool, optional): Whether to replace weights with sampled wavelets. Defaults to False.
+
+        Returns:
+            torch.Tensor: Output activations after LeakyReLU/sqrt(2) scaling of shape (B, C_out, H_out, W_out).
+        """
         b = x.shape[0]
         styles = self.affine(w)
 
@@ -173,6 +254,14 @@ class SynthesisLayer(nn.Module):
 
 
 class ToRGBLayer(nn.Module):
+    """StyleGAN2 ToRGB projection layer converting hidden features to 3 RGB image channels.
+
+    Args:
+        in_channels (int): Input feature channel dimension.
+        img_channels (int, optional): Output image color channels. Defaults to 3.
+        w_dim (int, optional): Latent style vector dimension. Defaults to 512.
+    """
+
     def __init__(self, in_channels: int, img_channels: int = 3, w_dim: int = 512):
         super().__init__()
         self.affine = nn.Linear(w_dim, in_channels)
@@ -180,7 +269,16 @@ class ToRGBLayer(nn.Module):
         self.conv = ModulatedConv2d(in_channels, img_channels, kernel_size=1, up=False)
         self.bias = nn.Parameter(torch.zeros(img_channels))
 
-    def forward(self, x: torch.Tensor, w: torch.Tensor):
+    def forward(self, x: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
+        """Projects hidden feature map to RGB space with randomized linear projection weights.
+
+        Args:
+            x (torch.Tensor): Feature tensor of shape (B, C, H, W).
+            w (torch.Tensor): Style vector of shape (B, w_dim).
+
+        Returns:
+            torch.Tensor: RGB image residual tensor of shape (B, 3, H, W).
+        """
         styles = self.affine(w)
         # Randomize ToRGB projection at each iteration to increase chromatic diversity
         weight = torch.randn_like(self.conv.weight)
@@ -189,6 +287,16 @@ class ToRGBLayer(nn.Module):
 
 
 class SynthesisBlock(nn.Module):
+    """Multi-resolution StyleGAN2 synthesis block containing 2 conv layers and a ToRGB residual.
+
+    Args:
+        in_channels (int): Input feature channels.
+        out_channels (int): Output feature channels.
+        resolution (int): Spatial resolution of this block.
+        w_dim (int, optional): Style vector dimension. Defaults to 512.
+        is_first (bool, optional): Whether this is the initial 4x4 resolution block. Defaults to False.
+    """
+
     def __init__(self, in_channels: int, out_channels: int, resolution: int, w_dim: int = 512, is_first: bool = False):
         super().__init__()
         self.resolution = resolution
@@ -203,8 +311,34 @@ class SynthesisBlock(nn.Module):
 
         self.torgb = ToRGBLayer(out_channels, img_channels=3, w_dim=w_dim)
 
-    def forward(self, x, img, w_iter, noise_mode: str = "random", fixed_noise_map: torch.Tensor | None = None,
-        wavelet_bank: torch.Tensor | None = None, bias_range: float = 0.0, randomize_filters: bool = False):
+    def forward(
+        self,
+        x: torch.Tensor | None,
+        img: torch.Tensor | None,
+        w_iter,
+        noise_mode: str = "random",
+        fixed_noise_map: torch.Tensor | None = None,
+        wavelet_bank: torch.Tensor | None = None,
+        bias_range: float = 0.0,
+        randomize_filters: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Runs block synthesis steps and accumulates RGB output.
+
+        Args:
+            x (torch.Tensor, optional): Input feature tensor from previous block.
+            img (torch.Tensor, optional): Accumulated RGB image from previous block.
+            w_iter: Iterator yielding style vector w for each synthesis step.
+            noise_mode (str, optional): Noise mode ('random' or 'pink_random'). Defaults to "random".
+            fixed_noise_map (torch.Tensor, optional): Shared 512x512 pink noise map. Defaults to None.
+            wavelet_bank (torch.Tensor, optional): Bank of wavelet filter kernels. Defaults to None.
+            bias_range (float, optional): Range for uniform bias sampling. Defaults to 0.0.
+            randomize_filters (bool, optional): Whether to use wavelet filters. Defaults to False.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]:
+                - x (torch.Tensor): Output feature tensor.
+                - img (torch.Tensor): Accumulated RGB image upsampled to block resolution.
+        """
         if self.is_first:
             w_conv = next(w_iter)
             b = w_conv.shape[0]
@@ -223,7 +357,17 @@ class SynthesisBlock(nn.Module):
         return x, img
 
 def batch_normalize_to_uint8(img: torch.Tensor) -> np.ndarray:
-    """Vectorized GPU normalization matching natural image channel distributions."""
+    """Vectorized GPU normalization matching natural image channel distributions.
+
+    Standardizes image channels and scales with empirical ImageNet natural scene color
+    mean and standard deviation priors from 'Learning to See by Looking at Noise'.
+
+    Args:
+        img (torch.Tensor): Raw generated image tensor of shape (B, 3, H, W).
+
+    Returns:
+        np.ndarray: Normalized image array of shape (B, H, W, 3) with uint8 values in [0, 255].
+    """
     b = img.shape[0]
     device = img.device
 
@@ -244,6 +388,21 @@ def batch_normalize_to_uint8(img: torch.Tensor) -> np.ndarray:
 
 
 class UntrainedStyleGAN(nn.Module):
+    """Untrained StyleGAN2 architecture used as an architectural inductive bias generator.
+
+    Generates structured synthetic images without training by passing noise vectors through
+    a randomly initialized generative network with weight demodulation, multiscale synthesis,
+    and optional wavelet filter/pink noise injection.
+
+    References:
+        - M. Baradad et al., "Learning to See by Looking at Noise", NeurIPS 2021.
+
+    Args:
+        resolution (int, optional): Output image spatial resolution. Must be a power of 2.
+            Defaults to 256.
+        w_dim (int, optional): Dimensionality of latent style vectors. Defaults to 512.
+    """
+
     def __init__(self, resolution: int = 256, w_dim: int = 512):
         super().__init__()
         self.resolution = resolution
@@ -267,6 +426,16 @@ class UntrainedStyleGAN(nn.Module):
         self.register_buffer('wavelet_bank', build_wavelet_bank())
 
     def forward(self, w: torch.Tensor, variant: str = 'oriented') -> torch.Tensor:
+        """Synthesizes images from latent style representations.
+
+        Args:
+            w (torch.Tensor): Latent style tensor of shape (B, num_ws, w_dim).
+            variant (str, optional): StyleGAN noise configuration variant
+                ('random', 'highfreq', 'sparse', or 'oriented'). Defaults to 'oriented'.
+
+        Returns:
+            torch.Tensor: Raw generated image tensor of shape (B, 3, resolution, resolution).
+        """
         # Variant configuration parameters
         cfg = {
             'random':   {'noise': 'random',      'same_noise': False, 'bias': 0.0, 'filters': False},
@@ -300,9 +469,28 @@ def generate_stylegan_dataset(
     batch_size: int = 16,
     variant: str = 'oriented',
     reinit_interval: int = 400,
-    save_prefix: str = ""
-):
-    """Generates synthetic representations directly streamed to an open_memmap disk array."""
+    save_prefix: str = "",
+) -> None:
+    """Generates synthetic representations directly streamed to an open_memmap disk array.
+
+    Generates synthetic samples by querying randomly re-initialized StyleGAN networks
+    and saving directly into an open_memmap numpy array file to minimize RAM overhead.
+
+    Args:
+        savepath (Path): Directory where output dataset will be written.
+        device (torch.device): Device on which generator model will run.
+        n_images (int, optional): Total number of images to synthesize. Defaults to 10000.
+        resolution (int, optional): Image resolution (height and width). Defaults to 256.
+        batch_size (int, optional): Batch size per synthesis forward pass. Defaults to 16.
+        variant (str, optional): StyleGAN configuration variant ('random', 'highfreq',
+            'sparse', or 'oriented'). Defaults to 'oriented'.
+        reinit_interval (int, optional): Number of generated samples before reinitializing
+            network weights with fresh random parameters. Defaults to 400.
+        save_prefix (str, optional): Optional prefix for output filename. Defaults to "".
+
+    Returns:
+        None
+    """
     dataset_name = f"{save_prefix}_stylegan.npy" if save_prefix else "stylegan.npy"
     dataset_savepath = savepath / dataset_name
     dataset_savepath.parent.mkdir(parents=True, exist_ok=True)
@@ -339,8 +527,19 @@ def generate_stylegan_samples(
     resolution: int = 256,
     variant: str = 'oriented',
 ) -> np.ndarray:
-    """Generates and saves n_samples images directly to output_dir for visual inspection."""
+    """Generates synthetic image samples directly in-memory for visual inspection.
 
+    Args:
+        device (torch.device): Computing device.
+        n_samples (int, optional): Number of synthetic image samples to generate. Defaults to 8.
+        resolution (int, optional): Spatial resolution of output images. Defaults to 256.
+        variant (str, optional): Noise configuration variant ('random', 'highfreq',
+            'sparse', or 'oriented'). Defaults to 'oriented'.
+
+    Returns:
+        np.ndarray: Array of generated normalized RGB images of shape (n_samples, resolution, resolution, 3)
+            with uint8 values in [0, 255].
+    """
     G = UntrainedStyleGAN(resolution=resolution).to(device).eval()
     leak = nn.LeakyReLU(0.2)
 
