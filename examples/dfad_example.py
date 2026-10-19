@@ -17,8 +17,6 @@ WORKERS = 2
 STEPS_PER_EPOCH = 100
 GENERATOR_LATENT_SIZE = 128
 
-TRAIN_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_train_images.npy"
-TRAIN_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_train_labels.npy"
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
@@ -66,6 +64,8 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True # Enable for performance
     # torch.use_deterministic_algorithms(True, warn_only=True) # Comment for performance
     torch.set_float32_matmul_precision("high") # From least to most performant: ["Highest", "High", "Medium"]
+    torch.backends.cuda.matmul.allow_tf32 = True # Disable if unsupported
+    torch.backends.cudnn.allow_tf32 = True # Disable if unsupported
 
     teacher_model = resnet34()
     teacher_model.conv1 = torch.nn.Conv2d(
