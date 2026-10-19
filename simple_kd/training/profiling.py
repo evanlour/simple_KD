@@ -1,7 +1,14 @@
-from accelerate import Accelerator
 import os
+
 import torch
-from torch.profiler import profile, ProfilerActivity, schedule, tensorboard_trace_handler
+from accelerate import Accelerator
+from torch.profiler import (
+    ProfilerActivity,
+    profile,
+    schedule,
+    tensorboard_trace_handler,
+)
+
 
 def profile_training_loop(
     accelerator: Accelerator,
@@ -15,28 +22,28 @@ def profile_training_loop(
     epochs:int =1,
     log_dir:str ="./profile_logs"
 ):
-    """ A simplified train function designed around profiling cpu and gpu usage. Use to optimize batch size and augmentations.
+    """A simplified training function designed around profiling CPU and GPU usage. Use to optimize batch size and augmentations.
 
     Args:
+        accelerator (Accelerator): The HuggingFace Accelerator instance managing device placement and precision.
         model (torch.nn.Module): The model that will be benchmarked.
-        train_loader (torch.utils.data.DataLoader): The train data that will be used for benchmarking.
-        optimizer (torch.optim): The optimizer that will be used.
-        device (torch.device): The device where the benchmarking will take place.
+        optimizer (torch.optim.Optimizer): The optimizer that will be used during profiling.
         criterion (torch.nn.Module): The loss criterion that will be benchmarked.
-        epochs (int, optional): The training epochs, no need for a lot of them, as the benchmarking takes place on the second epoch. Defaults to 2.
-        augmentations (torch.nn.Module, optional): The augmentations that will be applied to the train data. Defaults to None.
-        val_augmentations (torch.nn.Module, optional): The augmentations that will be applied to the val data. Defaults to None.
-        val_loader (torch.utils.data.DataLoader, optional): The validation data that will be used. Defaults to None.
-        amp (torch.dtype, optional): Automatic mixed precision. The accepted dtypes depend on device. Usually torch.float32, torch.float16, torch.bfloat16. Defaults to torch.float32.
+        train_loader (torch.utils.data.DataLoader): The train DataLoader used for benchmarking.
+        val_loader (torch.utils.data.DataLoader, optional): The validation DataLoader. Defaults to None.
+        augmentations (torch.nn.Module, optional): On-device augmentations applied to training batches. Defaults to None.
+        val_augmentations (torch.nn.Module, optional): On-device augmentations applied to validation batches. Defaults to None.
+        epochs (int, optional): The training epochs. Profiling takes place according to the schedule. Defaults to 1.
+        log_dir (str, optional): Directory where TensorBoard trace files and per-rank profiling traces are stored. Defaults to "./profile_logs".
     """
 
     batches_per_epoch = len(train_loader)
     my_schedule = schedule(
-        skip_first=batches_per_epoch + 5, # Skip the first epoch and 5 more batches
-        wait=2,                           # Check per 2 batches (or prof.step())
-        warmup=2,                         # Warmup
-        active=4,                         # Record 4 batches for data
-        repeat=1                          # Run only once
+        skip_first=batches_per_epoch + 5, # Skip the first epoch and 5 batches to avoid warm-up overhead
+        wait=2,                           # Wait 2 batches before starting warm-up
+        warmup=2,                         # Warm up profiler for 2 batches
+        active=4,                         # Record traces for 4 active batches
+        repeat=1                          # Run the cycle once
     )
 
     # Save per-rank traces

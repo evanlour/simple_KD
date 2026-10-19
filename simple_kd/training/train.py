@@ -1,9 +1,12 @@
 import csv
 import time
+from pathlib import Path
+
 import torch
 from accelerate import Accelerator
+
 from simple_kd.utils import SimpleGradClip
-from pathlib import Path
+
 
 def train(accelerator: Accelerator,
           model: torch.nn.Module,
@@ -21,29 +24,34 @@ def train(accelerator: Accelerator,
           save_prefix: str = "",
           save_model: bool = True,
           save_history: bool = True) -> dict:
-    """A concise train function for a neural model. Configured mostly around classification tasks.
+    """A concise training function for a neural model, configured primarily around classification tasks.
 
     Args:
-        accelerator (Accelerator): The accelerator instance.
+        accelerator (Accelerator): The HuggingFace Accelerator instance managing device placement and precision.
         model (torch.nn.Module): The model that will be trained.
-        train_loader (torch.utils.data.DataLoader): The train data that will be used.
-        optimizer (torch.optim): The optimizer that will be used.
-        criterion (torch.nn.Module): The criterion which the training will take place.
-        epochs (int, optional): The training epochs. Defaults to 10.
-        epochs_per_val (int, optional): If set > 1 it will skip validation epochs, in case speed is needed. Defaults to 1.
-        clipper (SimpleGradClip, optional): If not none, clips the gradients. Defaults to None.
-        augmentations (torch.nn.Module, optional): The training augmentations. These happen on device. Defaults to None.
-        val_augmentations (torch.nn.Module, optional): The validation augmentations. These happen on device. Defaults to None.
-        scheduler (torch.optim.lr_scheduler, optional): The learning rate scheduler. Called once per epoch. Defaults to None.
-        val_loader (torch.utils.data.DataLoader, optional): The validation data that will be used. Defaults to None.
-        save_location (str, optional): If not none, sets the location where the history and the model will be saved. Defaults to None.
-        save_model (bool, optional): Dictates whether the model will be saved. Defaults to True.
-        save_history (bool, optional): Dictates whether the history will be saved. Defaults to True.
+        train_loader (torch.utils.data.DataLoader): The DataLoader providing training batches.
+        optimizer (torch.optim.Optimizer): The optimizer used for model updates.
+        criterion (torch.nn.Module): The loss criterion used for training (e.g. CrossEntropyLoss).
+        epochs (int, optional): The total number of training epochs. Defaults to 10.
+        epochs_per_val (int, optional): Evaluation frequency. If set > 1, skips intermediate validation epochs for speed. Defaults to 1.
+        clipper (SimpleGradClip, optional): Optional gradient clipper applied before optimizer step. Defaults to None.
+        augmentations (torch.nn.Module, optional): On-device training augmentations. Defaults to None.
+        val_augmentations (torch.nn.Module, optional): On-device validation augmentations. Defaults to None.
+        scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler stepped once per epoch. Defaults to None.
+        val_loader (torch.utils.data.DataLoader, optional): The DataLoader providing validation batches. Defaults to None.
+        save_location (Path, optional): Directory path where checkpoints and history CSV will be saved. Defaults to None.
+        save_prefix (str, optional): Optional prefix prepended to saved checkpoint and history filenames. Defaults to "".
+        save_model (bool, optional): Whether to save the unwrapped model state dictionary. Defaults to True.
+        save_history (bool, optional): Whether to save training metrics history as a CSV file. Defaults to True.
 
     Returns:
-        history(dict): Per epoch statistics around train and validation accuracy, along with the learning rate and the time of each epoch.
-
-        If on an epoch the validation step is skipped, the data written are from the previous epoch.
+        dict: A dictionary containing per-epoch metric lists:
+            - "train_loss": Average training loss per epoch.
+            - "train_accuracy": Training accuracy percentage per epoch.
+            - "val_loss": Validation loss per epoch (or repeated from previous if skipped).
+            - "val_accuracy": Validation accuracy percentage per epoch.
+            - "lr": Current learning rate per epoch.
+            - "epoch_time": Total elapsed time in seconds per epoch.
     """
 
     history = {"train_loss": [], "train_accuracy": [],

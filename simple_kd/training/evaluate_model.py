@@ -1,12 +1,15 @@
 import json
-import torch
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+import torch
+from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
+
 from simple_kd.utils import InMemoryDataset
-from pathlib import Path
+
 
 def evaluate_model(model: torch.nn.Module,
         images: Path | np.ndarray,
@@ -18,20 +21,30 @@ def evaluate_model(model: torch.nn.Module,
         classes:int = 1000,
         save_folder: Path | None = None,
         save_prefix: str = "") -> dict:
-    """Tests the given model on the given dataset. If the model is trained on a subset of the dataset, provide the class number.
+    """Tests and evaluates a model on a dataset, computing classification metrics, confusion matrices, and predictions.
 
     Args:
-        model (torch.nn.Module): The model that will be tested.
-        images (str | np.ndarray): The test images. Accepts either a numpy array, or the location to one.
-        labels (str | np.ndarray): The test labels. Accepts either a numpy array, or the location to one.
-        batch_size (int): The batch size to be used.
-        augs (torch.nn.Module): The augmentations that will be applied to the model. Usually conversion to float and normalization.
-        device (torch.device): The device where the testing will take place.
-        criterion (torch.nn.Module): The criterion for loss calculation.
-        classes (int, optional): Set to the number of the model's trained classes. If the number is lower than of the class amount, samples with a class label equal or above that will be removed. Defaults to 1000.
-        save_folder (str, optional): If not none, saves test metrics to this directory. Defaults to None.
+        model (torch.nn.Module): The model to be evaluated.
+        images (Path | np.ndarray): The test images array or Path to a .npy file.
+        labels (Path | np.ndarray): The test labels array or Path to a .npy file.
+        batch_size (int): Batch size used during evaluation.
+        augs (torch.nn.Module): Preprocessing or validation augmentations (e.g. normalization, dtype conversion).
+        device (torch.device): Device on which evaluation runs.
+        criterion (torch.nn.Module): Loss criterion used to compute test loss (e.g. CrossEntropyLoss).
+        classes (int, optional): The number of classes to evaluate. If lower than dataset class count, samples with labels >= classes are filtered out. Defaults to 1000.
+        save_folder (Path, optional): Directory path where evaluation artifacts (metrics JSON, confusion matrix PNG, and predictions Parquet) are saved. Defaults to None.
+        save_prefix (str, optional): Optional prefix prepended to saved evaluation files. Defaults to "".
+
     Returns:
-        ret_data(dict): Dictionary containing the labels and predictions, along with accuracy, loss, precision and recall data.
+        dict: A dictionary containing evaluation metrics:
+            - "test_loss": Average evaluation loss across the dataset.
+            - "test_accuracy": Top-1 test accuracy percentage.
+            - "weighted_precision": Weighted average precision score.
+            - "weighted_recall": Weighted average recall score.
+            - "weighted_f1_score": Weighted average F1 score.
+            - "macro_precision": Macro-averaged precision score across classes.
+            - "macro_recall": Macro-averaged recall score across classes.
+            - "macro_f1_score": Macro-averaged F1 score across classes.
     """
 
     # Setting up the test dataset
