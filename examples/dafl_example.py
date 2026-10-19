@@ -1,14 +1,15 @@
 import random
-import numpy as np
-import torch
-from torchvision.transforms import v2
-from accelerate import Accelerator
-from torchvision.models import resnet34, resnet18
 from pathlib import Path
 
-from simple_kd.training import evaluate_model
+import numpy as np
+import torch
+from accelerate import Accelerator
+from torchvision.models import resnet18, resnet34
+from torchvision.transforms import v2
+
 from simple_kd.data_free import dafl_train
 from simple_kd.generators import SimpleGenerator
+from simple_kd.training import evaluate_model
 from simple_kd.utils import apply_hooks
 
 CLASSES = 100
@@ -135,8 +136,9 @@ if __name__ == "__main__":
         student_optimizer=student_optimizer,
         generator_optimizer=generator_optimizer,
         epochs=EPOCHS,
-        one_hot_gamma=0.5,
-        feature_gamma=0.1,
+        one_hot_gamma=1.0,
+        feature_gamma=0.5,
+        info_entropy_gamma=20.0,
         generator_latent_size=GENERATOR_LATENT_SIZE,
         steps_per_epoch=STEPS_PER_EPOCH,
         scheduler=student_scheduler,

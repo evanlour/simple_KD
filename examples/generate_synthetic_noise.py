@@ -1,8 +1,15 @@
-import torch
-import torchvision.models as models
-from simple_kd.utils import apply_hooks
-from simple_kd.generators.synthetic_noise import generate_feature_dataset, generate_dead_leaves_dataset, generate_statistical_dataset, generate_stylegan_dataset
 from pathlib import Path
+
+import torch
+from torchvision import models
+
+from simple_kd.generators.synthetic_noise import (
+    generate_dead_leaves_dataset,
+    generate_feature_dataset,
+    generate_statistical_dataset,
+    generate_stylegan_dataset,
+)
+from simple_kd.utils import apply_hooks
 
 DEAD_LEAVES_TARGET_LOCATION = "/mnt/storage/Datasets/dead_leaves"
 FEATURE_VIS_TARGET_LOCATION = "/mnt/storage/Datasets/feature_vis"

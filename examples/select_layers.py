@@ -1,7 +1,7 @@
-from torchvision.models.feature_extraction import get_graph_node_names
 import torch
+from torchvision.models.feature_extraction import get_graph_node_names
 
-from simple_kd.utils import apply_hooks, FeatureSelector
+from simple_kd.utils import FeatureSelector, apply_hooks
 
 if __name__ == "__main__":
     from torchvision.models import resnet18  #, resnet34, mobilenet_v3_small

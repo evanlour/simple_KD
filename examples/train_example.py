@@ -1,14 +1,15 @@
 import random
-import numpy as np
-import torch
-import torch.utils.data as data
-from torchvision.transforms import v2
-from accelerate import Accelerator
-from torchvision.models import resnet34
 from pathlib import Path
 
+import numpy as np
+import torch
+from accelerate import Accelerator
+from torch.utils import data
+from torchvision.models import resnet34
+from torchvision.transforms import v2
+
+from simple_kd.training import evaluate_model, train
 from simple_kd.utils import Dataset
-from simple_kd.training import train, evaluate_model
 
 CLASSES = 100
 EPOCHS = 100

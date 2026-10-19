@@ -1,13 +1,15 @@
 import argparse
-from typing import cast
 import gc
 import json
-import numpy as np
-from pathlib import Path
 import os
 import shutil
-from sklearn.model_selection import train_test_split
+from pathlib import Path
+from typing import cast
+
+import numpy as np
 import torchvision
+from sklearn.model_selection import train_test_split
+
 
 def compute_mean_std_uint8(images: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """This function returns the mean and the std of a dataset.
