@@ -8,8 +8,11 @@ version = "0.0.1"
 description = "A modular PyTorch toolkit for Knowledge Distillation"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Evangelos Lourmpakis", email= "evanlourb@gmail.com"}]
 dependencies = [
     "torch>=2.0.0",
+    "torchvision>=0.15.0",
     "accelerate>=0.20.0",
 ]
 
@@ -17,6 +20,7 @@ dependencies = [
 viz = [
     "plotly>=5.0.0",
     "matplotlib>=3.5.0",
+    "seaborn>=0.12.0",
 ]
 dev = [
     "pytest>=7.0.0",
