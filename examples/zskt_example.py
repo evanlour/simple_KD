@@ -17,7 +17,7 @@ EPOCHS = 500
 BATCH = 512
 WORKERS = 2
 GENERATOR_STEPS_PER_EPOCH = 1
-MODEL_STEPS_PER_EPOCH = 25
+MODEL_STEPS_PER_EPOCH = 50
 GENERATOR_LATENT_SIZE = 128
 
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
@@ -138,10 +138,11 @@ if __name__ == "__main__":
         generator_optimizer=generator_optimizer,
         epochs=EPOCHS,
         generator_latent_size=GENERATOR_LATENT_SIZE,
-        generator_steps=1,
-        model_steps=10,
-        model_at_gamma=64.0,
-        generator_at_gamma=64.0,
+        generator_steps=GENERATOR_STEPS_PER_EPOCH,
+        model_steps=MODEL_STEPS_PER_EPOCH,
+        temperature=4.0,
+        model_at_gamma=0.0,
+        generator_at_gamma=0.0,
         scheduler=student_scheduler,
         generator_scheduler=generator_scheduler,
         student_stages=student_stages,
