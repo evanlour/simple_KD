@@ -129,7 +129,6 @@ def train_model_with_generator(accelerator: Accelerator,
     generator.eval()
     student_model.train()
     with accelerator.accumulate(student_model):
-        student_optimizer.zero_grad(set_to_none=True)
         student_output = student_model(images)
         with torch.no_grad():
             teacher_output = teacher_model(images)
@@ -148,6 +147,7 @@ def train_model_with_generator(accelerator: Accelerator,
             accelerator.unscale_gradients(student_optimizer)
             clipper(student_model.parameters())
         student_optimizer.step()
+        student_optimizer.zero_grad(set_to_none=True)
     return train_loss, generator_statistics
 
 
@@ -185,7 +185,6 @@ def train_generator(accelerator: Accelerator,
     generator.train()
     student_model.eval()
     with accelerator.accumulate(generator):
-        generator_optimizer.zero_grad(set_to_none=True)
         student_output = student_model(images)
         with torch.no_grad():
             teacher_output = teacher_model(images)
@@ -203,5 +202,6 @@ def train_generator(accelerator: Accelerator,
             accelerator.unscale_gradients(generator_optimizer)
             clipper(generator.parameters())
         generator_optimizer.step()
+        generator_optimizer.zero_grad(set_to_none=True)
 
     return train_loss

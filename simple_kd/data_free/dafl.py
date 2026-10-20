@@ -132,8 +132,6 @@ def dafl_train(accelerator: Accelerator,
             gen_imgs = images_from_generator(generator,augmentations,accelerator.device,batch_size,generator_latent_size,requires_grad=True)
 
             with accelerator.accumulate(student_model, generator):
-                student_optimizer.zero_grad(set_to_none=True)
-                generator_optimizer.zero_grad(set_to_none=True)
 
                 teacher_output = teacher_model(gen_imgs) # Teacher stages are needed for training
 
@@ -162,6 +160,9 @@ def dafl_train(accelerator: Accelerator,
 
                 student_optimizer.step()
                 generator_optimizer.step()
+
+                student_optimizer.zero_grad(set_to_none=True)
+                generator_optimizer.zero_grad(set_to_none=True)
 
             total_train_loss += student_loss.detach() * batch_size
             total_gen_loss += gen_loss.detach() * batch_size
