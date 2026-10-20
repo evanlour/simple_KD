@@ -1,3 +1,7 @@
+"""Original code is from https://github.com/mbaradad/learning_with_noise/blob/main/generate_datasets/dead_leaves/generate_dataset.py
+Credits to the author there! The paper Learning to See by Looking at Noise (Baraded et al.) Can be found at https://arxiv.org/abs/2106.05963.
+"""
+
 from pathlib import Path
 
 import numpy as np
@@ -81,7 +85,7 @@ def match_cumulative_cdf(source: torch.Tensor, target_reference: torch.Tensor) -
     tgt_flat = target_reference.view(B, C, -1)
     M = tgt_flat.shape[-1]
 
-    src_sorted, src_indices = torch.sort(src_flat, dim=-1)
+    _, src_indices = torch.sort(src_flat, dim=-1)
     tgt_sorted, _ = torch.sort(tgt_flat, dim=-1)
 
     coords = torch.linspace(0, M - 1, N, device=source.device).expand(B, C, N)
@@ -100,8 +104,8 @@ def match_cumulative_cdf(source: torch.Tensor, target_reference: torch.Tensor) -
 def sample_1f_spectrum(
     B: int,
     resolution: int,
+    device: torch.device,
     slope_range: tuple[float, float] = (0.5, 3.5),
-    device: torch.device = torch.device('cpu'),
 ) -> torch.Tensor:
     """Samples random 2D anisotropic 1/f^s power spectrum magnitude templates.
 
@@ -213,10 +217,10 @@ def sample_wmm_model(B: int, num_filters: int, resolution: int, device: torch.de
     return sign * s * (g ** (1.0 / r))
 
 def build_steerable_filters(
+    device: torch.device,
     resolution: int,
     num_scales: int = 3,
     num_orientations: int = 4,
-    device: torch.device = torch.device('cpu'),
 ) -> torch.Tensor:
     """Constructs frequency-domain Simoncelli steerable pyramid filter bank.
 
@@ -262,6 +266,7 @@ def build_steerable_filters(
 
 def generate_statistical_sample(
     B: int,
+    device: torch.device,
     resolution: int = 128,
     filters: torch.Tensor | None = None,
     n_iter: int = 10,
@@ -269,7 +274,6 @@ def generate_statistical_sample(
     impose_wmm_flag: bool = True,
     impose_color_flag: bool = True,
     correlate_channels: bool = True,
-    device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
 ) -> torch.Tensor:
     """Synthesizes a batch of statistical noise images by iterative constraint satisfaction.
 
@@ -295,7 +299,7 @@ def generate_statistical_sample(
             in range [0, 255].
     """
     if filters is None and impose_wmm_flag:
-        filters = build_steerable_filters(resolution, device=device)
+        filters = build_steerable_filters(resolution=resolution, device=device)
 
     x = torch.randn(B, 3, resolution, resolution, device=device)
 
@@ -360,7 +364,7 @@ def generate_statistical_dataset(
     dataset_savepath = savepath / dataset_name
     dataset_savepath.parent.mkdir(parents=True, exist_ok=True)
 
-    filters = build_steerable_filters(resolution, device=device)
+    filters = build_steerable_filters(resolution=resolution, device=device)
 
     mmap = np.lib.format.open_memmap(
         dataset_savepath,

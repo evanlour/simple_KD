@@ -10,22 +10,23 @@ def _attention_map(stage, power):
     am = torch.div(am, norm + 1e-6)
     return am
 
-def at_loss(student_stages: torch.Tensor,
-           teacher_stages: torch.Tensor,
+def at_loss(student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+           teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
            stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
            power: float = 2.0,
            gamma: float = 64.0) -> torch.Tensor:
     """Code implementation of the Attention Transfer(AT) method.
 
-    The original paper can be found at https://arxiv.org/pdf/1612.03928.
+    The original paper (PAYING MORE ATTENTION TO ATTENTION: IMPROVING THE PERFORMANCE OF CONVOLUTIONAL
+    NEURAL NETWORKS VIA ATTENTION TRANSFER) can be found at https://arxiv.org/pdf/1612.03928.
 
     Code implementation was originally from https://github.com/AberHu/Knowledge-Distillation-Zoo.
 
     Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
-        student_stages (list[torch.Tensor]): List of intermediate activations for the student model.
-        teacher_stages (list[torch.Tensor]): List of intermediate activations for the teacher model.
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model.
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the teacher model.
         stage_percentages (tuple[float] | list[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
         power (float, optional): The power the stages are elevated at to retrieve the attention map. Defaults to 2.0.
         gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 64.0.

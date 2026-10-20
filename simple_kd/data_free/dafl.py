@@ -33,7 +33,7 @@ def dafl_train(accelerator: Accelerator,
                validation_frequency: int = 50,
                scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
                generator_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-               teacher_stages: list[torch.Tensor] | tuple[torch.Tensor] = [],
+               teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
                clipper: SimpleGradClip | None = None,
                validation_metrics: dict | None = None,
                save_location: Path | None = None,
@@ -77,7 +77,7 @@ def dafl_train(accelerator: Accelerator,
         validation_frequency (int, optional): Frequency (in epochs) to run validation evaluation. Defaults to 50.
         scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for student. Defaults to None.
         generator_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for generator. Defaults to None.
-        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Intermediate teacher activation hooks. Defaults to [].
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Intermediate teacher activation hooks. Defaults to [].
         clipper (SimpleGradClip, optional): Gradient clipping utility applied before optimizer steps. Defaults to None.
         validation_metrics (dict, optional): Dictionary with validation images, labels, augs, and classes. Defaults to None.
         save_location (Path, optional): Directory where checkpoints and history CSV will be stored. Defaults to None.
@@ -213,34 +213,33 @@ def dafl_train(accelerator: Accelerator,
                 )
 
     accelerator.wait_for_everyone()
-    if accelerator.is_main_process:
-        if save_location is not None:
-            if save_student_model:
-                student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
-                student_model_savepath = save_location / student_model_name
-                student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-                unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
-                torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
+    if accelerator.is_main_process and save_location is not None:
+        if save_student_model:
+            student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
+            student_model_savepath = save_location / student_model_name
+            student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
+            unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
+            torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
 
-            if save_generator:
-                generator_name = f"{save_prefix}_generator.pth" if save_prefix else "generator.pth"
-                generator_savepath = save_location / generator_name
-                generator_savepath.parent.mkdir(parents=True, exist_ok=True)
-                unwrapped_generator = accelerator.unwrap_model(generator, keep_torch_compile=False)
-                torch.save(unwrapped_generator.state_dict(), generator_savepath)
+        if save_generator:
+            generator_name = f"{save_prefix}_generator.pth" if save_prefix else "generator.pth"
+            generator_savepath = save_location / generator_name
+            generator_savepath.parent.mkdir(parents=True, exist_ok=True)
+            unwrapped_generator = accelerator.unwrap_model(generator, keep_torch_compile=False)
+            torch.save(unwrapped_generator.state_dict(), generator_savepath)
 
-            if save_history:
-                history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
-                history_savepath = save_location / history_name
-                history_savepath.parent.mkdir(parents=True, exist_ok=True)
-                data = {
-                    key: vals + [vals[-1]] * (epochs - len(vals))
-                    for key, vals in history.items()
-                }
-                with open(history_savepath, mode="w", newline="") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(data.keys())
-                    writer.writerows(zip(*data.values()))
+        if save_history:
+            history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            history_savepath = save_location / history_name
+            history_savepath.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                key: vals + [vals[-1]] * (epochs - len(vals))
+                for key, vals in history.items()
+            }
+            with open(history_savepath, mode="w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(data.keys())
+                writer.writerows(zip(*data.values()))
 
     accelerator.free_memory()
     return history

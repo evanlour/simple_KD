@@ -1,5 +1,5 @@
 """Original code is from https://github.com/mbaradad/learning_with_noise/blob/main/generate_datasets/dead_leaves/generate_dataset.py
-Credits to the author there!
+Credits to the author there! The paper Learning to See by Looking at Noise (Baraded et al.) Can be found at https://arxiv.org/abs/2106.05963.
 """
 
 import multiprocessing as mp
@@ -23,10 +23,6 @@ def dead_leaves(
     onto an image canvas until full coverage is reached. The scale distribution follows
     a power law r^(-sigma), producing scale-invariant natural image statistics (power
     spectrum proportional to 1/f^2).
-
-    References:
-        - M. Baradad et al., "Learning to See by Looking at Noise", NeurIPS 2021, https://arxiv.org/pdf/2106.05963.
-        - Source: https://github.com/mbaradad/learning_with_noise
 
     Args:
         res (int): Resolution (height and width) of the square image.

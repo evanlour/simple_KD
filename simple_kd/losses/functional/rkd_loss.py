@@ -31,22 +31,22 @@ def _get_distance_feats(stage: torch.Tensor) -> torch.Tensor:
     stage_dist_feats = stage_dist_feats / mean_stage_dist_feats
     return stage_dist_feats
 
-def rkd_angle_loss(student_stages: list[torch.Tensor],
-            teacher_stages: list[torch.Tensor],
+def rkd_angle_loss(student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+            teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
             stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
             gamma: float = 64.0) -> torch.Tensor:
     """Code implementation of the RKD method: Angle variant.
 
-    The original paper can be found at https://arxiv.org/pdf/1904.05068.
+    The original paper Relational Knowledge Distillation can be found at https://arxiv.org/pdf/1904.05068.
 
     Code implementation was originally from https://github.com/AberHu/Knowledge-Distillation-Zoo.
 
     Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
-        student_stages (list[torch.Tensor]): List of intermediate activations for the student model.
-        teacher_stages (list[torch.Tensor]): List of intermediate activations for the teacher model.
-        stage_percentages (list[float] | tuple[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model.
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the teacher model.
+        stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
         gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 64.0.
 
     Returns:
@@ -59,22 +59,22 @@ def rkd_angle_loss(student_stages: list[torch.Tensor],
         loss += F.smooth_l1_loss(student_angle_feats, teacher_angle_feats) * stage_percentage # huber loss
     return loss * gamma # type: ignore
 
-def rkd_dist_loss(student_stages: list[torch.Tensor],
-        teacher_stages: list[torch.Tensor],
+def rkd_dist_loss(student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+        teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
         stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
         gamma: float = 4.0) -> torch.Tensor:
     """Code implementation of the RKD method: Distance variant.
 
-    The original paper can be found at https://arxiv.org/pdf/1904.05068.
+    The original paper Relational Knowledge Distillation can be found at https://arxiv.org/pdf/1904.05068.
 
     Code implementation was originally from https://github.com/AberHu/Knowledge-Distillation-Zoo.
 
     Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
-        student_stages (list[torch.Tensor]): List of intermediate activations for the student model.
-        teacher_stages (list[torch.Tensor]): List of intermediate activations for the teacher model.
-        stage_percentages (list[float] | tuple[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model.
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the teacher model.
+        stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
         gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 64.0.
 
     Returns:

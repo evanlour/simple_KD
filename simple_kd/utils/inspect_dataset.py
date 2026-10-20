@@ -52,7 +52,7 @@ def inspect_dataset(
         k = min(num_display, total)
         idxs = np.linspace(0, total - 1, k, dtype=int)
 
-        fig, axes = plt.subplots(1, k, figsize=(2 * k, 2.5))
+        _, axes = plt.subplots(1, k, figsize=(2 * k, 2.5))
         axes = [axes] if k == 1 else axes
 
         for ax, idx in zip(axes, idxs):

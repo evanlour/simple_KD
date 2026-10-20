@@ -7,10 +7,11 @@ class DKDLoss(torch.nn.Module):
     """Wrapper module for Decoupled Knowledge Distillation (DKD) loss.
 
     Decouples classical KD into Target Class Knowledge Distillation (TCKD) and
-    Non-Target Class Knowledge Distillation (NCKD):
-        L_DKD = tckd_gamma * L_TCKD + nckd_gamma * L_NCKD
+    Non-Target Class Knowledge Distillation (NCKD).
 
-    The original paper is "Decoupled Knowledge Distillation" (Zhao et al., CVPR 2022, https://arxiv.org/abs/2203.08679).
+    The original paper Decoupled Knowledge Distillation can be found at https://arxiv.org/pdf/2203.08679.
+
+    Code implementation is mostly extracted from The mdistiller repository at https://github.com/megvii-research/mdistiller.
 
     Args:
         T (float, optional): Distillation temperature. Defaults to 4.0.

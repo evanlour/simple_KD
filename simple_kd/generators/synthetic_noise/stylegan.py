@@ -1,3 +1,9 @@
+"""Original code is from https://github.com/mbaradad/learning_with_noise/blob/main/generate_datasets/dead_leaves/generate_dataset.py
+Credits to the author there! The paper Learning to See by Looking at Noise (Baraded et al.) Can be found at https://arxiv.org/abs/2106.05963.
+StyleGan code was from the paper Training Generative Adversarial Networks with Limited Data https://arxiv.org/abs/2006.06676 and the original
+implementation can be found here https://github.com/nvlabs/stylegan2-ada-pytorch
+"""
+
 from pathlib import Path
 
 import numpy as np
@@ -6,14 +12,11 @@ import torch.nn.functional as F
 from torch import nn
 
 
-def build_wavelet_bank(device: torch.device = torch.device('cpu')) -> torch.Tensor:
+def build_wavelet_bank(device: torch.device) -> torch.Tensor:
     """Builds a fixed bank of 40 oriented and high-frequency 3x3 wavelet filter kernels.
 
     Constructs 16 oriented step edges (at 8 distinct angles), 16 high-frequency line filters,
     and 8 sparse point/cross kernels, including positive and negative sign inversions.
-
-    References:
-        - M. Baradad et al., "Learning to See by Looking at Noise", NeurIPS 2021.
 
     Args:
         device (torch.device, optional): Target device for filter bank tensor. Defaults to CPU.
@@ -64,8 +67,8 @@ def build_wavelet_bank(device: torch.device = torch.device('cpu')) -> torch.Tens
 def generate_pink_noise(
     height: int,
     width: int,
+    device: torch.device,
     alpha: float | None = None,
-    device: torch.device = torch.device('cpu'),
 ) -> torch.Tensor:
     """Generates a 2D 1/f^alpha pink noise map with a multiscale Laplacian envelope.
 
@@ -354,7 +357,7 @@ class SynthesisBlock(nn.Module):
             img = img + y
         else:
             img = y
-        return x, img
+        return x, img # type: ignore
 
 def batch_normalize_to_uint8(img: torch.Tensor) -> np.ndarray:
     """Vectorized GPU normalization matching natural image channel distributions.
@@ -394,9 +397,6 @@ class UntrainedStyleGAN(nn.Module):
     a randomly initialized generative network with weight demodulation, multiscale synthesis,
     and optional wavelet filter/pink noise injection.
 
-    References:
-        - M. Baradad et al., "Learning to See by Looking at Noise", NeurIPS 2021.
-
     Args:
         resolution (int, optional): Output image spatial resolution. Must be a power of 2.
             Defaults to 256.
@@ -423,7 +423,7 @@ class UntrainedStyleGAN(nn.Module):
             self.num_ws += (2 if is_first else 3) # convs + to_rgb
             self.blocks.append(block)
 
-        self.register_buffer('wavelet_bank', build_wavelet_bank())
+        self.register_buffer('wavelet_bank', build_wavelet_bank(device=torch.device("cpu")))
 
     def forward(self, w: torch.Tensor, variant: str = 'oriented') -> torch.Tensor:
         """Synthesizes images from latent style representations.

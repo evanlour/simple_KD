@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 def skeptical_loss(student_output: torch.Tensor,
         teacher_output: torch.Tensor,
-        student_stages: list[torch.Tensor],
+        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
         aux_classifier: torch.nn.Module,
         T: float = 4.0,
         kd_gamma: float = 0.5,
@@ -18,7 +18,7 @@ def skeptical_loss(student_output: torch.Tensor,
     Args:
         student_output (torch.Tensor): The student model output.
         teacher_output (torch.Tensor): The teacher model output.
-        student_stages (list[torch.Tensor]): List of intermediate activations for the student model. Only the first will be used, so a list of len equal to 1 can be provided.
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model. Only the first will be used, so a list of len equal to 1 can be provided.
         aux_classifier (torch.nn.Module): An auxiliar classifier to match the intermediate model activations. The provided SkepticalClassifier inside the same file can be used.
         T (float, optional): The distillation temperature. Defaults to 4.0.
         kd_gamma (float, optional): The traditional KD part gamma. Defaults to 0.5.

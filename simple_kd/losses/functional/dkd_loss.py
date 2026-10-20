@@ -16,7 +16,7 @@ def dkd_loss(student_output: torch.Tensor,
         nckd_gamma: float = 8.0) -> torch.Tensor:
     """Code implementation of the Decoupled Knowledge Distillation (DKD) method.
 
-    The original paper can be found at https://arxiv.org/pdf/2203.08679.
+    The original paper Decoupled Knowledge Distillation can be found at https://arxiv.org/pdf/2203.08679.
 
     Code implementation is mostly extracted from The mdistiller repository at https://github.com/megvii-research/mdistiller.
 

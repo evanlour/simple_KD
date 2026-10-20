@@ -7,8 +7,7 @@ class ZSKTLoss(torch.nn.Module):
     """Wrapper module for Zero-Shot Knowledge Transfer (ZSKT) loss.
 
     Combines output knowledge distillation (KDLoss) with intermediate attention
-    transfer (ATLoss) across network stages:
-        Loss = kd_gamma * KD(student, teacher) + at_gamma * AT(student_stages, teacher_stages)
+    transfer (ATLoss) across network stages.
 
     The original paper is "Zero-shot Knowledge Transfer via Adversarial Belief Matching"
     (Micaelli & Storkey, NeurIPS 2019, https://arxiv.org/abs/1905.09768). The code is available
@@ -21,7 +20,7 @@ class ZSKTLoss(torch.nn.Module):
         stage_percentages (list[float] | tuple[float], optional): Per-stage weight fractions for AT loss. Defaults to [0.25, 0.25, 0.25, 0.25].
     """
     def __init__(self, T: float=4.0, kd_gamma: float=1.0, at_gamma: float=128.0,
-              stage_percentages: list[float] | tuple[float] = [0.25, 0.25, 0.25, 0.25]):
+              stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25)):
         super().__init__()
         self.T = T
         self.kd_gamma = kd_gamma

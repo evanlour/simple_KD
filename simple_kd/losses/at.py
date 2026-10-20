@@ -6,12 +6,12 @@ from .functional import at_loss
 class ATLoss(torch.nn.Module):
     """Wrapper module for Attention Transfer (AT) loss.
 
-    Transfers intermediate spatial attention maps from teacher to student by computing
-    normalized channel-collapsed attention maps and minimizing MSE loss across stages:
-        am = sum(|stage|^power, dim=channel) / ||am||_2
+    The original paper (PAYING MORE ATTENTION TO ATTENTION: IMPROVING THE PERFORMANCE OF CONVOLUTIONAL
+    NEURAL NETWORKS VIA ATTENTION TRANSFER) can be found at https://arxiv.org/pdf/1612.03928.
 
-    The original paper is "Paying More Attention to Attention: Improving the Performance of
-    Convolutional Neural Networks via Attention Transfer" (Zagoruyko & Komodakis, ICLR 2017, https://arxiv.org/abs/1612.03928).
+    Code implementation was originally from https://github.com/AberHu/Knowledge-Distillation-Zoo.
+
+    Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
         power (float, optional): Exponent used to construct attention maps. Defaults to 2.0.

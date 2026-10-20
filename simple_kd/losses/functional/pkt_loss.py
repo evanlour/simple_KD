@@ -18,9 +18,10 @@ def pkt_loss(student_output: torch.Tensor,
             eps: float = 1e-6) -> torch.Tensor:
     """Code implementation of the Probabilistic Knowledge Transfer (PKT) method.
 
-    The original code implementation can be found at https://arxiv.org/pdf/1803.10837.
+    The original paper Learning Deep Representations with Probabilistic Knowledge Transfer can be found at https://arxiv.org/pdf/1803.10837.
 
-    Code implementation was mostly extracted from the Knowledge Distillation Zoo repository https://github.com/AberHu/Knowledge-Distillation-Zoo along with the mdistiller repository at https://github.com/megvii-research/mdistiller.
+    Code implementation was mostly extracted from the Knowledge Distillation Zoo repository https://github.com/AberHu/Knowledge-Distillation-Zoo
+    along with the mdistiller repository at https://github.com/megvii-research/mdistiller.
 
     Args:
             student_output (torch.Tensor): The student model output.

@@ -8,9 +8,11 @@ class RKDAngleLoss(torch.nn.Module):
 
     Penalizes angular differences of sample triplets in the embedding space.
 
-    The original paper is "Relational Knowledge Distillation" (Park et al., CVPR 2019, https://arxiv.org/abs/1904.05068).
-    For all non data free methods the mdistiller https://github.com/megvii-research/mdistiller and the Knowledge distillation zoo https://github.com/AberHu/Knowledge-Distillation-Zoo
-    were used as references.
+    The original paper Relational Knowledge Distillation can be found at https://arxiv.org/pdf/1904.05068.
+
+    Code implementation was originally from https://github.com/AberHu/Knowledge-Distillation-Zoo.
+
+    Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
         gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.
@@ -36,12 +38,13 @@ class RKDAngleLoss(torch.nn.Module):
 class RKDDistLoss(torch.nn.Module):
     """Wrapper module for Relational Knowledge Distillation (RKD): Distance-wise loss.
 
-    Penalizes differences in normalized pairwise Euclidean distances between sample pairs:
-        L_RkdDist = SmoothL1(dist_norm(student), dist_norm(teacher))
+    Penalizes differences in normalized pairwise Euclidean distances between sample pairs.
 
-    The original paper is "Relational Knowledge Distillation" (Park et al., CVPR 2019, https://arxiv.org/abs/1904.05068).
-    For all non data free methods the mdistiller https://github.com/megvii-research/mdistiller and the Knowledge distillation zoo https://github.com/AberHu/Knowledge-Distillation-Zoo
-    were used as references.
+    The original paper Relational Knowledge Distillation can be found at https://arxiv.org/pdf/1904.05068.
+
+    Code implementation was originally from https://github.com/AberHu/Knowledge-Distillation-Zoo.
+
+    Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
         gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.

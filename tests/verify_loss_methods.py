@@ -100,14 +100,14 @@ def supported_dtypes(device: torch.device) -> list[torch.dtype]:
         x = torch.randn(2, 2, dtype=torch.float16, device=device)
         _ = (x @ x).sum()
         supported.append(torch.float16)
-    except Exception:
+    except ValueError:
         print("dtype=float16 is not supported on current device")
 
     try:
         x = torch.randn(2, 2, dtype=torch.bfloat16, device=device)
         _ = (x @ x).sum()
         supported.append(torch.bfloat16)
-    except Exception:
+    except ValueError:
         print("dtype=bfloat16 is not supported on current device")
 
     return supported

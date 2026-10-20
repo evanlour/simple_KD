@@ -270,34 +270,33 @@ def distill(accelerator: Accelerator,
             print(temp_message)
 
     accelerator.wait_for_everyone()
-    if accelerator.is_main_process:
-        if save_location is not None:
-            if save_student_model:
-                student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
-                student_model_savepath = save_location / student_model_name
-                student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-                unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
-                torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
+    if accelerator.is_main_process and save_location is not None:
+        if save_student_model:
+            student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
+            student_model_savepath = save_location / student_model_name
+            student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
+            unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
+            torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
 
-            if save_teacher_model:
-                teacher_model_name = f"{save_prefix}_teacher_model.pth" if save_prefix else "teacher_model.pth"
-                teacher_model_savepath = save_location / teacher_model_name
-                teacher_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-                unwrapped_teacher_model = accelerator.unwrap_model(teacher_model, keep_torch_compile=False)
-                torch.save(unwrapped_teacher_model.state_dict(), teacher_model_savepath)
+        if save_teacher_model:
+            teacher_model_name = f"{save_prefix}_teacher_model.pth" if save_prefix else "teacher_model.pth"
+            teacher_model_savepath = save_location / teacher_model_name
+            teacher_model_savepath.parent.mkdir(parents=True, exist_ok=True)
+            unwrapped_teacher_model = accelerator.unwrap_model(teacher_model, keep_torch_compile=False)
+            torch.save(unwrapped_teacher_model.state_dict(), teacher_model_savepath)
 
-            if save_history:
-                history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
-                history_savepath = save_location / history_name
-                history_savepath.parent.mkdir(parents=True, exist_ok=True)
-                data = {
-                    key: vals + [vals[-1]] * (epochs - len(vals))
-                    for key, vals in history.items()
-                }
-                with open(history_savepath, mode="w", newline="") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(data.keys())
-                    writer.writerows(zip(*data.values()))
+        if save_history:
+            history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            history_savepath = save_location / history_name
+            history_savepath.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                key: vals + [vals[-1]] * (epochs - len(vals))
+                for key, vals in history.items()
+            }
+            with open(history_savepath, mode="w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(data.keys())
+                writer.writerows(zip(*data.values()))
 
     accelerator.free_memory()
     return history

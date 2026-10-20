@@ -8,8 +8,11 @@ class SPLoss(torch.nn.Module):
 
     Preserves pairwise activation similarities of input samples across network layers.
 
+    The original paper can be found at https://arxiv.org/pdf/1907.09682.
 
-    The original paper is "Similarity-Preserving Knowledge Distillation" (Tung & Mori, ICCV 2019, https://arxiv.org/abs/1907.09682).
+    Code implementation was originally from https://github.com/AberHu/Knowledge-Distillation-Zoo.
+
+    Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
         gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.

@@ -100,8 +100,8 @@ def train_model_with_generator(accelerator: Accelerator,
                                 generator: torch.nn.Module,
                                 criterion: torch.nn.Module,
                                 student_optimizer: torch.optim.Optimizer,
-                                student_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
-                                teacher_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
+                                student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+                                teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
                                 clipper: SimpleGradClip | None = None,) -> tuple[torch.Tensor, dict]:
     """Executes a single optimization step for the student model using generator images.
 
@@ -116,8 +116,8 @@ def train_model_with_generator(accelerator: Accelerator,
         generator (torch.nn.Module): Generator model (placed in eval mode).
         criterion (torch.nn.Module): Student distillation loss criterion (e.g. DFADLoss, KDLoss).
         student_optimizer (torch.optim.Optimizer): Optimizer for student model parameters.
-        student_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Student intermediate stage activations. Defaults to [].
-        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Teacher intermediate stage activations. Defaults to [].
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Student intermediate stage activations. Defaults to [].
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Teacher intermediate stage activations. Defaults to [].
         clipper (SimpleGradClip, optional): Optional gradient clipping utility. Defaults to None.
 
     Returns:
@@ -158,8 +158,8 @@ def train_generator(accelerator: Accelerator,
                                 generator: torch.nn.Module,
                                 criterion: torch.nn.Module,
                                 generator_optimizer: torch.optim.Optimizer,
-                                student_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
-                                teacher_stages: list[torch.Tensor] | tuple[torch.Tensor] =[],
+                                student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+                                teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
                                 clipper: SimpleGradClip | None = None,) -> torch.Tensor:
     """Executes a single optimization step for the generator.
 
@@ -174,8 +174,8 @@ def train_generator(accelerator: Accelerator,
         generator (torch.nn.Module): Generator model being optimized.
         criterion (torch.nn.Module): Generator loss criterion (e.g. inverted DFADLoss).
         generator_optimizer (torch.optim.Optimizer): Optimizer for generator parameters.
-        student_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Student intermediate stage activations. Defaults to [].
-        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor], optional): Teacher intermediate stage activations. Defaults to [].
+        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Student intermediate stage activations. Defaults to [].
+        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Teacher intermediate stage activations. Defaults to [].
         clipper (SimpleGradClip, optional): Optional gradient clipping utility. Defaults to None.
 
     Returns:

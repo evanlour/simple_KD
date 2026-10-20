@@ -9,11 +9,10 @@ class PKTLoss(torch.nn.Module):
     Models the probability distribution of sample interactions in the feature space
     using cosine similarities and minimizes the KL divergence between student and teacher distributions.
 
-    The original paper is "Learning Deep Representations with Probabilistic Knowledge Transfer"
-    (Passalis & Tefas, ECCV 2018, https://arxiv.org/abs/1803.10837).
-    The original paper is "Relational Knowledge Distillation" (Park et al., CVPR 2019, https://arxiv.org/abs/1904.05068).
-    For all non data free methods the mdistiller https://github.com/megvii-research/mdistiller and the Knowledge distillation zoo https://github.com/AberHu/Knowledge-Distillation-Zoo
-    were used as references.
+    The original paper Learning Deep Representations with Probabilistic Knowledge Transfer can be found at https://arxiv.org/pdf/1803.10837.
+
+    Code implementation was mostly extracted from the Knowledge Distillation Zoo repository https://github.com/AberHu/Knowledge-Distillation-Zoo
+    along with the mdistiller repository at https://github.com/megvii-research/mdistiller.
 
     Args:
         gamma (float, optional): Loss multiplier for the method. Defaults to 256.0.

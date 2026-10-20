@@ -34,11 +34,11 @@ class SkepticalLoss(torch.nn.Module):
     """Wrapper module for Skeptical Student distillation loss.
 
     Trains students to learn robust representations when distilled from imperfect or poisoned
-    teachers ("nasty teachers") by combining output KD with internal self-distillation:
-        L_Skeptical = kd_gamma * KD(student, teacher) + in_kd_gamma * KD(student, aux_classifier(stage))
+    teachers ("nasty teachers") by combining output KD with internal self-distillation.
 
-    The original paper is Analyzing the Confidentiality of Undistillable
-    Teachers in Knowledge Distillation (Ma et al., 2021, https://openreview.net/pdf?id=Laz0L5tjml).
+    The original paper can be found here https://openreview.net/pdf?id=Laz0L5tjml.
+
+    The original code implementation by the authors can be found here https://github.com/ksouvik52/Skeptical2021.
 
     Args:
         T (float, optional): The distillation temperature. Defaults to 4.0.

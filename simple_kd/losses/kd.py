@@ -8,7 +8,7 @@ class KDLoss(torch.nn.Module):
 
     Computes Kullback-Leibler (KL) divergence between softened student and teacher probability distributions.
 
-    The original paper is "Distilling the Knowledge in a Neural Network" (Hinton et al., 2015, https://arxiv.org/abs/1503.02531).
+    The original paper is "Distilling the Knowledge in a Neural Network" and can be found at https://arxiv.org/pdf/1503.02531.
 
     Args:
         T (float, optional): The distillation temperature. Defaults to 4.0.
