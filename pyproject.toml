@@ -15,6 +15,7 @@ dependencies = [
     "torchvision>=0.15.0",
     "accelerate>=0.20.0",
     "opencv-python>=4.0,<5.0",
+    "pyarrow>=22.0",
 ]
 
 [project.optional-dependencies]
