@@ -4,7 +4,6 @@ simple_kd.egg-info/
 utils/__pychache__/
 simple_kd/utils/__pycache__/
 simple_kd/losses/__pycache__/
-simple_kd/losses/functional/
 simple_kd/training/__pycache__/
 notes.txt
 pending.txt
@@ -18,3 +17,4 @@ simple_kd/generators/synthetic_noise/__pycache__/
 examples/__pycache__/
 tests/images/
 simple_kd/__pycache__/
+simple_kd/losses/functional/__pycache__/
