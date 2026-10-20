@@ -56,3 +56,26 @@ class InMemoryDataset(torch.utils.data.Dataset):
         if self.augmentations is not None:
             image = self.augmentations(image)
         return image, torch.tensor(label).long().squeeze()
+
+class LabelFreeDataset(torch.utils.data.Dataset):
+    """Memory-mapped PyTorch Dataset for loading NumPy (.npy) image only.
+
+    Args:
+        images_path (str): The filesystem path of the images .npy file.
+        loading_mode (Literal['r+', 'r', 'w+', 'c'] | None, optional): Memory-map mode passed to np.load. Defaults to 'r'.
+        augmentations (torch.nn.Module | None, optional): On-fetch PyTorch data augmentations. Defaults to None.
+    """
+    def __init__(self, images_path: str, loading_mode: Literal['r+', 'r', 'w+', 'c'] | None = 'r', augmentations: torch.nn.Module | None = None):
+        super().__init__()
+        self.images = np.load(images_path, mmap_mode=loading_mode)
+        self.augmentations = augmentations
+    def __len__(self) -> int:
+        """Returns the total number of samples in the dataset."""
+        return len(self.images)
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Fetches a sample and returns the augmented image and label tensor."""
+        image = self.images[index]
+        if self.augmentations is not None:
+            image = self.augmentations(image)
+        return image
