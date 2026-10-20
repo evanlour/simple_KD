@@ -104,7 +104,6 @@ def dfad_train(accelerator: Accelerator,
         start_time = time.perf_counter()
         for _ in range(steps_per_epoch):
             gen_imgs = images_from_generator(generator, augmentations, accelerator.device, batch_size, generator_latent_size)
-            # gen_imgs = gen_imgs.to(memory_format=torch.channels_last)
             train_loss, gen_statistics = train_model_with_generator(accelerator, gen_imgs, student_model, teacher_model,
                 generator, criterion, student_optimizer, student_stages=student_stages, teacher_stages=teacher_stages, clipper=clipper)
             total_train_loss += train_loss.detach() * batch_size # type: ignore
