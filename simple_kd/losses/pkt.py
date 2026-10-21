@@ -17,20 +17,22 @@ class PKTLoss(torch.nn.Module):
     Args:
         gamma (float, optional): Loss multiplier for the method. Defaults to 256.0.
         eps (float, optional): Epsilon to prevent division by zero in normalization. Defaults to 1e-6.
+        stage_percentages (list[float] | tuple[float, ...], optional): Relative weights for each stage. Defaults to (0.25, 0.25, 0.25, 0.25).
     """
-    def __init__(self, gamma: float = 256.0, eps: float = 1e-6):
+    def __init__(self, gamma: float = 256.0, eps: float = 1e-6, stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25)):
         super().__init__()
         self.gamma = gamma
         self.eps = eps
+        self.stage_percentages = stage_percentages
 
-    def forward(self, student_output: torch.Tensor, teacher_output: torch.Tensor) -> torch.Tensor:
+    def forward(self, student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...], teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...]) -> torch.Tensor:
         """Computes PKT loss between student and teacher outputs.
 
         Args:
-            student_output (torch.Tensor): Feature representations from student model.
-            teacher_output (torch.Tensor): Feature representations from teacher model.
+            student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): Intermediate activations from student model.
+            teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): Intermediate activations from teacher model.
 
         Returns:
             torch.Tensor: Scalar PKT loss.
         """
-        return pkt_loss(student_output=student_output, teacher_output=teacher_output, gamma=self.gamma, eps=self.eps)
+        return pkt_loss(student_stages=student_stages, teacher_stages=teacher_stages, gamma=self.gamma, eps=self.eps, stage_percentages=self.stage_percentages)

@@ -40,7 +40,8 @@ KD_CONFIGS = {
         "nckd_gamma": 8.0
     },
     "PKT":{
-        "gamma": 1.0
+        "stage_percentages": (0.3, 0.3, 0.2, 0.2),
+        "gamma": 128.0,
     },
     "SSP":{
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
