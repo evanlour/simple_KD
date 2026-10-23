@@ -10,22 +10,27 @@ class FeatureSelector:
         options (list[str]): List of candidate layer or node names from the model.
         title (str, optional): Terminal header title. Defaults to "Select the intermediate layers of your model".
     """
-    def __init__(self, options: list[str], title: str = "Select the intermediate layers of your model"):
+
+    def __init__(
+        self,
+        options: list[str],
+        title: str = "Select the intermediate layers of your model",
+    ):
         self.title = title
         self.options = options
 
     def _loop(self, stdscr):
-        curses.curs_set(0) # Disables cursor
+        curses.curs_set(0)  # Disables cursor
         if curses.has_colors():
             curses.start_color()
             curses.use_default_colors()
 
         current_index = 0
-        top_item = 0 # The first visible item index
-        selected = set() # This will store the saved options
+        top_item = 0  # The first visible item index
+        selected = set()  # This will store the saved options
 
         while True:
-            #stdscr.clear()
+            # stdscr.clear()
             stdscr.erase()
             h, w = stdscr.getmaxyx()
             max_rows = max(1, h - 4)
@@ -37,7 +42,12 @@ class FeatureSelector:
                 top_item = current_index - max_rows + 1
 
             stdscr.addstr(0, 2, self.title, curses.A_BOLD | curses.A_UNDERLINE)
-            stdscr.addstr(1, 2, "Navigate with the arrow keys | Space: Select | Enter: Done | 'q': Abort", curses.A_DIM)
+            stdscr.addstr(
+                1,
+                2,
+                "Navigate with the arrow keys | Space: Select | Enter: Done | 'q': Abort",
+                curses.A_DIM,
+            )
 
             visible_options = self.options[top_item : top_item + max_rows]
             for i, opt in enumerate(visible_options):
@@ -75,7 +85,10 @@ class FeatureSelector:
         """
         return curses.wrapper(self._loop)
 
-def apply_hooks(model: torch.nn.Module, layers: list[str] | tuple[str, ...], detach: bool=False) -> list[torch.Tensor]:
+
+def apply_hooks(
+    model: torch.nn.Module, layers: list[str] | tuple[str, ...], detach: bool = False
+) -> list[torch.Tensor]:
     """Registers forward hooks on model submodules to extract intermediate activations.
 
     Args:
@@ -95,6 +108,7 @@ def apply_hooks(model: torch.nn.Module, layers: list[str] | tuple[str, ...], det
         def create_hook(index: int):
             def hook(model: torch.nn.Module, input: tuple, output: torch.Tensor):
                 features[index] = output.detach() if detach else output
+
             return hook
 
         current_layer.register_forward_hook(create_hook(i))

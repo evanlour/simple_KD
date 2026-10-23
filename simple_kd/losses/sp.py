@@ -18,12 +18,21 @@ class SPLoss(torch.nn.Module):
         gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.
         stage_percentages (tuple[float, ...] | list[float], optional): Relative weights for each network stage. Defaults to (0.25, 0.25, 0.25, 0.25).
     """
-    def __init__(self, gamma: float = 64.0, stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25)):
+
+    def __init__(
+        self,
+        gamma: float = 64.0,
+        stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
+    ):
         super().__init__()
         self.gamma = gamma
         self.stage_percentages = stage_percentages
 
-    def forward(self, student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...], teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...]) -> torch.Tensor:
+    def forward(
+        self,
+        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+        teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    ) -> torch.Tensor:
         """Computes Similarity-Preserving loss across intermediate stages.
 
         Args:
@@ -33,4 +42,9 @@ class SPLoss(torch.nn.Module):
         Returns:
             torch.Tensor: Scalar similarity preservation loss.
         """
-        return sp_loss(student_stages=student_stages, teacher_stages=teacher_stages, gamma=self.gamma, stage_percentages=self.stage_percentages)
+        return sp_loss(
+            student_stages=student_stages,
+            teacher_stages=teacher_stages,
+            gamma=self.gamma,
+            stage_percentages=self.stage_percentages,
+        )

@@ -7,4 +7,15 @@ from .skeptical import SkepticalClassifier, SkepticalLoss
 from .sp import SPLoss
 from .ssp import SSPLoss
 
-__all__ = ["ATLoss", "DKDLoss", "KDLoss", "PKTLoss", "RKDAngleLoss", "RKDDistLoss", "SPLoss", "SSPLoss", "SkepticalClassifier", "SkepticalLoss"]
+__all__ = [
+    "ATLoss",
+    "DKDLoss",
+    "KDLoss",
+    "PKTLoss",
+    "RKDAngleLoss",
+    "RKDDistLoss",
+    "SPLoss",
+    "SSPLoss",
+    "SkepticalClassifier",
+    "SkepticalLoss",
+]

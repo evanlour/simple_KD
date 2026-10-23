@@ -13,7 +13,14 @@ class SimpleGenerator(torch.nn.Module):
         channels (int): Number of output image color channels (e.g. 3 for RGB).
         channel_format (torch.memory_format, optional): PyTorch memory layout (e.g. channels_last). Defaults to torch.channels_last.
     """
-    def __init__(self, img_size: int, latent_size: int, channels: int, channel_format=torch.channels_last):
+
+    def __init__(
+        self,
+        img_size: int,
+        latent_size: int,
+        channels: int,
+        channel_format=torch.channels_last,
+    ):
         super().__init__()
 
         self.init_size = img_size // 4

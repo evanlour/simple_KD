@@ -7,4 +7,14 @@ from .skeptical_loss import skeptical_loss
 from .sp_loss import sp_loss
 from .ssp_loss import ssp_loss
 
-__all__ = ["at_loss", "dkd_loss", "kd_loss", "pkt_loss", "rkd_angle_loss", "rkd_dist_loss", "skeptical_loss", "sp_loss", "ssp_loss"]
+__all__ = [
+    "at_loss",
+    "dkd_loss",
+    "kd_loss",
+    "pkt_loss",
+    "rkd_angle_loss",
+    "rkd_dist_loss",
+    "skeptical_loss",
+    "sp_loss",
+    "ssp_loss",
+]

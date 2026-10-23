@@ -18,15 +18,15 @@ from simple_kd.losses.functional import (
 )
 
 KD_FUNCTIONS = {
-    "KD":  kd_loss,
+    "KD": kd_loss,
     "DKD": dkd_loss,
     "PKT": pkt_loss,
     "SSP": ssp_loss,
-    "AT":  at_loss,
+    "AT": at_loss,
     "RKDAngle": rkd_angle_loss,
     "RKDDist": rkd_dist_loss,
     "SP": sp_loss,
-    "Skeptical": skeptical_loss
+    "Skeptical": skeptical_loss,
 }
 
 KD_CONFIGS = {
@@ -34,47 +34,35 @@ KD_CONFIGS = {
         "T": 4.0,
         "gamma": 1.0,
     },
-    "DKD":{
-        "T": 4.0,
-        "tckd_gamma": 1.0,
-        "nckd_gamma": 8.0
-    },
-    "PKT":{
+    "DKD": {"T": 4.0, "tckd_gamma": 1.0, "nckd_gamma": 8.0},
+    "PKT": {
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
         "gamma": 128.0,
     },
-    "SSP":{
+    "SSP": {
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
         "gamma": 128.0,
-        "sort_channels": True
+        "sort_channels": True,
     },
-    "AT":{
-        "stage_percentages": (0.3, 0.3, 0.2, 0.2),
-        "gamma": 128.0,
-        "pow": 2.0
-    },
-    "RKDAngle":{
+    "AT": {"stage_percentages": (0.3, 0.3, 0.2, 0.2), "gamma": 128.0, "pow": 2.0},
+    "RKDAngle": {
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
         "gamma": 128.0,
     },
-    "RKDDist":{
+    "RKDDist": {
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
         "gamma": 128.0,
     },
-    "SP":{
+    "SP": {
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
         "gamma": 128.0,
     },
-    "Skeptical":
-    {
-        "T": 4.0,
-        "kd_gamma": 1.0,
-        "in_kd_gamma": 1.0
-    }
+    "Skeptical": {"T": 4.0, "kd_gamma": 1.0, "in_kd_gamma": 1.0},
 }
 
+
 def filter_function_call(fn, **kwargs):
-    """ Inner working function for the benchmark test file, removes non relevant data provided to the function.
+    """Inner working function for the benchmark test file, removes non relevant data provided to the function.
 
     Args:
         fn (function): The function that will be cleared.
@@ -85,6 +73,7 @@ def filter_function_call(fn, **kwargs):
     """
     params = inspect.signature(fn).parameters
     return fn(**{k: v for k, v in kwargs.items() if k in params})
+
 
 def supported_dtypes(device: torch.device) -> list[torch.dtype]:
     """Checks what type of torch.dtype float options are available on the device.
@@ -113,6 +102,7 @@ def supported_dtypes(device: torch.device) -> list[torch.dtype]:
 
     return supported
 
+
 def cast_batch_tensors(batch: dict, dtype: torch.dtype) -> dict:
     """Internal function that converts a dictionary of tensors to the given torch.dtype. Does not convert ints.
 
@@ -140,7 +130,10 @@ def cast_batch_tensors(batch: dict, dtype: torch.dtype) -> dict:
             cast_dict[k] = v
     return cast_dict
 
-def measure_peak_vram_mb(fn, batch_tensors: dict, config: dict, device: torch.device) -> float:
+
+def measure_peak_vram_mb(
+    fn, batch_tensors: dict, config: dict, device: torch.device
+) -> float:
     """Measures transient VRAM allocated during forward + backward (in MB).
 
     Args:
@@ -164,10 +157,13 @@ def measure_peak_vram_mb(fn, batch_tensors: dict, config: dict, device: torch.de
     loss.backward(retain_graph=True)
 
     peak_mem = torch.cuda.max_memory_allocated(device)
-    mem_overhead_mb = max(0.0, (peak_mem - base_mem) / (1024**2)) #MB
+    mem_overhead_mb = max(0.0, (peak_mem - base_mem) / (1024**2))  # MB
     return mem_overhead_mb
 
-def benchmark_method(kd_functions: dict, kd_configs: dict, input_tensors: dict, accelerator: Accelerator):
+
+def benchmark_method(
+    kd_functions: dict, kd_configs: dict, input_tensors: dict, accelerator: Accelerator
+):
     """Benchmarks a dictionary of functions with their given configuration on a given device with given tensors.
 
     Args:
@@ -194,17 +190,20 @@ def benchmark_method(kd_functions: dict, kd_configs: dict, input_tensors: dict, 
                     "call": filter_function_call,
                     "kd_func": kd_func,
                     "current_batch": current_batch,
-                    "config": method_config
+                    "config": method_config,
                 },
                 sub_label=f"{name:<6}",
                 label=current_dtype,
                 description=f"Distillation benchmark for {device.type.upper()}",
-                num_threads=1
+                num_threads=1,
             )
             # Specific device benchmarks
             measurement = timer.blocked_autorange(min_run_time=0.5)
             local_time = torch.tensor(measurement.median * 1e6, device=device)
-            local_mem = torch.tensor(measure_peak_vram_mb(kd_func, current_batch, method_config, device), device=device)
+            local_mem = torch.tensor(
+                measure_peak_vram_mb(kd_func, current_batch, method_config, device),
+                device=device,
+            )
 
             # Average across all accelerators for reporting
             reduced_time = accelerator.reduce(local_time, reduction="mean")
@@ -223,7 +222,9 @@ def benchmark_method(kd_functions: dict, kd_configs: dict, input_tensors: dict, 
         header_cols = "".join([f"| {col:^{col_width}} " for col in dtype_names])
         divider = "-" * (14 + len(dtype_names) * (col_width + 3))
 
-        accelerator.print(f"\n[-- Distillation Benchmark: Speed & Peak VRAM for {accelerator.num_processes} process(es) and ({device.type.upper()}) --]")
+        accelerator.print(
+            f"\n[-- Distillation Benchmark: Speed & Peak VRAM for {accelerator.num_processes} process(es) and ({device.type.upper()}) --]"
+        )
         accelerator.print(f"{'Method':<12} {header_cols}")
         accelerator.print(divider)
 
@@ -241,15 +242,22 @@ def benchmark_method(kd_functions: dict, kd_configs: dict, input_tensors: dict, 
 
         accelerator.print(divider)
 
+
 if __name__ == "__main__":
     accelerator = Accelerator()
     device = accelerator.device
-    accelerator.print(f"Started testing with {accelerator.num_processes} processes and {device} device")
+    accelerator.print(
+        f"Started testing with {accelerator.num_processes} processes and {device} device"
+    )
     torch.manual_seed(42 + accelerator.process_index)
     dummy_student = torch.randn(64, 64, requires_grad=True, device=device)
     dummy_teacher = torch.randn(64, 64, requires_grad=True, device=device)
-    dummy_inter_student = [torch.randn(64, 64, 32, 32, requires_grad=True, device=device)]
-    dummy_inter_teacher = [torch.randn(64, 128, 16, 16, requires_grad=True, device=device)]
+    dummy_inter_student = [
+        torch.randn(64, 64, 32, 32, requires_grad=True, device=device)
+    ]
+    dummy_inter_teacher = [
+        torch.randn(64, 128, 16, 16, requires_grad=True, device=device)
+    ]
     dummy_images = torch.randn(64, 3, 128, 128, device=device)
     dummy_labels = torch.randint(low=0, high=63, size=(64,), device=device)
     dummy_classifier = SkepticalClassifier(64, 64).to(device=device)
@@ -260,14 +268,16 @@ if __name__ == "__main__":
         "teacher_stages": dummy_inter_teacher,
         "labels": dummy_labels,
         "images": dummy_images,
-        "aux_classifier": dummy_classifier
+        "aux_classifier": dummy_classifier,
     }
 
     # First validate that the methods work properly
     for name, kd_func in KD_FUNCTIONS.items():
         method_config = KD_CONFIGS[name]
         loss = filter_function_call(kd_func, **batch_tensor, **method_config)
-        assert loss.dim() == 0, f"{name} returned item of shape {loss.shape} instead of number"
+        assert loss.dim() == 0, (
+            f"{name} returned item of shape {loss.shape} instead of number"
+        )
         assert torch.isfinite(loss), f"{name}: loss is NaN or Inf ({loss.item()})"
         assert loss >= 0.0, f"{name}: loss is negative ({loss.item()})"
         loss.backward()

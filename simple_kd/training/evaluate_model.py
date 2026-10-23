@@ -11,16 +11,18 @@ from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_
 from simple_kd.utils import InMemoryDataset
 
 
-def evaluate_model(model: torch.nn.Module,
-        images: Path | np.ndarray,
-        labels: Path | np.ndarray,
-        batch_size:int,
-        augs: torch.nn.Module,
-        device: torch.device,
-        criterion: torch.nn.Module,
-        classes:int = 1000,
-        save_folder: Path | None = None,
-        save_prefix: str = "") -> dict:
+def evaluate_model(
+    model: torch.nn.Module,
+    images: Path | np.ndarray,
+    labels: Path | np.ndarray,
+    batch_size: int,
+    augs: torch.nn.Module,
+    device: torch.device,
+    criterion: torch.nn.Module,
+    classes: int = 1000,
+    save_folder: Path | None = None,
+    save_prefix: str = "",
+) -> dict:
     """Tests and evaluates a model on a dataset, computing classification metrics, confusion matrices, and predictions.
 
     Args:
@@ -53,19 +55,25 @@ def evaluate_model(model: torch.nn.Module,
     if isinstance(labels, Path):
         labels = np.load(labels)
 
-    assert type(images) is np.ndarray, "Something went wrong, images is not a numpy array!"
-    assert type(labels) is np.ndarray, "Something went wrong, labels is not a numpy array!"
+    assert type(images) is np.ndarray, (
+        "Something went wrong, images is not a numpy array!"
+    )
+    assert type(labels) is np.ndarray, (
+        "Something went wrong, labels is not a numpy array!"
+    )
     # If the model is trained on a subset of classes, subtract them
     mask = labels < classes
     images = images[mask]
     labels = labels[mask]
 
     test_dataset = InMemoryDataset(images, labels, augmentations=augs)
-    test_loader = torch.utils.data.DataLoader(test_dataset,
-                                batch_size=batch_size,
-                                shuffle=False,
-                                pin_memory=True,
-                                pin_memory_device=str(device))
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        pin_memory=True,
+        pin_memory_device=str(device),
+    )
 
     model.eval()
     all_preds = []
@@ -77,7 +85,7 @@ def evaluate_model(model: torch.nn.Module,
     with torch.no_grad():
         for batch in test_loader:
             inputs, labels = batch
-            inputs, labels = inputs.to(device), labels.to(device) # type: ignore
+            inputs, labels = inputs.to(device), labels.to(device)  # type: ignore
 
             outputs = model(inputs)
 
@@ -87,24 +95,36 @@ def evaluate_model(model: torch.nn.Module,
 
             _, predicted = torch.max(outputs, 1)
             all_preds.extend(predicted.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy()) #type: ignore
+            all_labels.extend(labels.cpu().numpy())  # type: ignore
 
             # Accuracy
-            test_total += labels.size(0) #type: ignore
-            test_correct += (predicted == labels).sum().item() #type: ignore
+            test_total += labels.size(0)  # type: ignore
+            test_correct += (predicted == labels).sum().item()  # type: ignore
 
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
 
     test_loss /= test_total
-    test_accuracy = 100. * test_correct / test_total
+    test_accuracy = 100.0 * test_correct / test_total
 
-    precision = float(precision_score(all_labels, all_preds, average="weighted", zero_division=0))    #type: ignore
-    recall = float(recall_score(all_labels, all_preds, average="weighted", zero_division=0))          #type: ignore
-    f1_test_score = float(f1_score(all_labels, all_preds, average="weighted", zero_division=0))       #type: ignore
-    precision_macro = float(precision_score(all_labels, all_preds, average="macro", zero_division=0)) #type: ignore
-    recall_macro = float(recall_score(all_labels, all_preds, average="macro", zero_division=0))       #type: ignore
-    f1_test_score_macro = float(f1_score(all_labels, all_preds, average="macro", zero_division=0))    #type: ignore
+    precision = float(
+        precision_score(all_labels, all_preds, average="weighted", zero_division=0)
+    )  # type: ignore
+    recall = float(
+        recall_score(all_labels, all_preds, average="weighted", zero_division=0)
+    )  # type: ignore
+    f1_test_score = float(
+        f1_score(all_labels, all_preds, average="weighted", zero_division=0)
+    )  # type: ignore
+    precision_macro = float(
+        precision_score(all_labels, all_preds, average="macro", zero_division=0)
+    )  # type: ignore
+    recall_macro = float(
+        recall_score(all_labels, all_preds, average="macro", zero_division=0)
+    )  # type: ignore
+    f1_test_score_macro = float(
+        f1_score(all_labels, all_preds, average="macro", zero_division=0)
+    )  # type: ignore
 
     metrics = {
         "test_loss": test_loss,
@@ -118,7 +138,11 @@ def evaluate_model(model: torch.nn.Module,
     }
 
     if save_folder is not None:
-        json_name = f"{save_prefix}_dataset_test_scores.json" if save_prefix else "dataset_test_scores.json"
+        json_name = (
+            f"{save_prefix}_dataset_test_scores.json"
+            if save_prefix
+            else "dataset_test_scores.json"
+        )
         with open(save_folder / json_name, "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2)
 
@@ -133,7 +157,9 @@ def evaluate_model(model: torch.nn.Module,
 
     if save_folder is not None:
         cm = confusion_matrix(all_labels, all_preds)
-        normalized_cm = cm.astype("float") / np.maximum(cm.sum(axis=1, keepdims=True), 1e-9) # Better for imbalanced classes
+        normalized_cm = cm.astype("float") / np.maximum(
+            cm.sum(axis=1, keepdims=True), 1e-9
+        )  # Better for imbalanced classes
 
         plt.figure(figsize=(8, 6))
         sns.heatmap(
@@ -145,19 +171,29 @@ def evaluate_model(model: torch.nn.Module,
         plt.ylabel("Actual")
         plt.title("Confusion Matrix")
         plt.tight_layout()
-        cm_name = f"{save_prefix}_confusion_matrix.png" if save_prefix else "confusion_matrix.png"
+        cm_name = (
+            f"{save_prefix}_confusion_matrix.png"
+            if save_prefix
+            else "confusion_matrix.png"
+        )
         plt.savefig(save_folder / cm_name)
         plt.close()
 
-        df_preds = pd.DataFrame({
-            "ground_truth": all_labels,
-            "prediction": all_preds,
-            "correct": [x == y for x, y in zip(all_labels, all_preds)]
-        })
-        parquet_name = f"{save_prefix}_predictions.parquet" if save_prefix else "predictions.parquet"
+        df_preds = pd.DataFrame(
+            {
+                "ground_truth": all_labels,
+                "prediction": all_preds,
+                "correct": [x == y for x, y in zip(all_labels, all_preds)],
+            }
+        )
+        parquet_name = (
+            f"{save_prefix}_predictions.parquet"
+            if save_prefix
+            else "predictions.parquet"
+        )
         df_preds.to_parquet(save_folder / parquet_name, index=False)
 
     if hasattr(torch, "accelerator") and hasattr(torch.accelerator, "empty_cache"):
-        torch.accelerator.empty_cache() #type: ignore
+        torch.accelerator.empty_cache()  # type: ignore
 
     return metrics

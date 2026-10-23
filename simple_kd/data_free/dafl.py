@@ -13,34 +13,36 @@ from .common import compute_generator_metrics, images_from_generator
 from .losses import DAFLLoss
 
 
-def dafl_train(accelerator: Accelerator,
-               student_model: torch.nn.Module,
-               teacher_model: torch.nn.Module,
-               generator: torch.nn.Module,
-               augmentations: torch.nn.Module,
-               student_optimizer: torch.optim.Optimizer,
-               generator_optimizer: torch.optim.Optimizer,
-               epochs: int,
-               batch_size: int,
-               generator_latent_size: int,
-               steps_per_epoch: int = 50,
-               print_frequency: int = 10,
-               feature_gamma: float = 1.0,
-               one_hot_gamma: float = 1.0,
-               info_entropy_gamma: float = 128.0,
-               kd_T: float = 4.0,
-               kd_gamma: float = 1.0,
-               validation_frequency: int = 50,
-               scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-               generator_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-               teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-               clipper: SimpleGradClip | None = None,
-               validation_metrics: dict | None = None,
-               save_location: Path | None = None,
-               save_prefix: str = "",
-               save_student_model: bool = True,
-               save_generator: bool = False,
-               save_history: bool = True) -> dict:
+def dafl_train(
+    accelerator: Accelerator,
+    student_model: torch.nn.Module,
+    teacher_model: torch.nn.Module,
+    generator: torch.nn.Module,
+    augmentations: torch.nn.Module,
+    student_optimizer: torch.optim.Optimizer,
+    generator_optimizer: torch.optim.Optimizer,
+    epochs: int,
+    batch_size: int,
+    generator_latent_size: int,
+    steps_per_epoch: int = 50,
+    print_frequency: int = 10,
+    feature_gamma: float = 1.0,
+    one_hot_gamma: float = 1.0,
+    info_entropy_gamma: float = 128.0,
+    kd_T: float = 4.0,
+    kd_gamma: float = 1.0,
+    validation_frequency: int = 50,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    generator_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    clipper: SimpleGradClip | None = None,
+    validation_metrics: dict | None = None,
+    save_location: Path | None = None,
+    save_prefix: str = "",
+    save_student_model: bool = True,
+    save_generator: bool = False,
+    save_history: bool = True,
+) -> dict:
     """Trains a student model and generator using Data-Free Learning (DAFL).
 
     DAFL trains a generator to synthesize pseudo-data directly from a pre-trained teacher
@@ -101,7 +103,7 @@ def dafl_train(accelerator: Accelerator,
     generator_criterion = DAFLLoss(
         feature_gamma=feature_gamma,
         one_hot_gamma=one_hot_gamma,
-        info_entropy_gamma=info_entropy_gamma
+        info_entropy_gamma=info_entropy_gamma,
     ).to(accelerator.device)
 
     history = {
@@ -112,7 +114,7 @@ def dafl_train(accelerator: Accelerator,
         "gen_conf": [],
         "gen_entropy": [],
         "gen_spread": [],
-        "epoch_time": []
+        "epoch_time": [],
     }
     teacher_model.eval()
 
@@ -129,24 +131,31 @@ def dafl_train(accelerator: Accelerator,
         student_model.train()
         generator.train()
         for _ in range(steps_per_epoch):
-            gen_imgs = images_from_generator(generator,augmentations,accelerator.device,batch_size,generator_latent_size,requires_grad=True)
+            gen_imgs = images_from_generator(
+                generator,
+                augmentations,
+                accelerator.device,
+                batch_size,
+                generator_latent_size,
+                requires_grad=True,
+            )
 
             with accelerator.accumulate(student_model, generator):
-
-                teacher_output = teacher_model(gen_imgs) # Teacher stages are needed for training
+                teacher_output = teacher_model(
+                    gen_imgs
+                )  # Teacher stages are needed for training
 
                 with torch.no_grad():
                     gen_statistics = compute_generator_metrics(gen_imgs, teacher_output)
 
                 gen_loss = generator_criterion(
-                    teacher_output=teacher_output,
-                    teacher_stages=teacher_stages
+                    teacher_output=teacher_output, teacher_stages=teacher_stages
                 )
 
                 student_output = student_model(gen_imgs.detach())
                 student_loss = criterion(
                     student_output=student_output,
-                    teacher_output=teacher_output.detach()
+                    teacher_output=teacher_output.detach(),
                 )
 
                 total_loss = gen_loss + student_loss
@@ -171,12 +180,20 @@ def dafl_train(accelerator: Accelerator,
             gen_entropy += gen_statistics["gen_entropy"] * batch_size
             gen_spread += gen_statistics["gen_spread"] * batch_size
 
-        epoch_samples = accelerator.reduce(train_total, reduction="sum").item() # type: ignore
-        model_epoch_loss = accelerator.reduce(total_train_loss, reduction="sum") / epoch_samples
-        gen_epoch_loss = accelerator.reduce(total_gen_loss, reduction="sum") / epoch_samples
-        gen_conf = accelerator.reduce(gen_conf, reduction="sum").item() / epoch_samples # type: ignore
-        gen_entropy = accelerator.reduce(gen_entropy, reduction="sum").item() / epoch_samples # type: ignore
-        gen_spread = accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples # type: ignore
+        epoch_samples = accelerator.reduce(train_total, reduction="sum").item()  # type: ignore
+        model_epoch_loss = (
+            accelerator.reduce(total_train_loss, reduction="sum") / epoch_samples
+        )
+        gen_epoch_loss = (
+            accelerator.reduce(total_gen_loss, reduction="sum") / epoch_samples
+        )
+        gen_conf = accelerator.reduce(gen_conf, reduction="sum").item() / epoch_samples  # type: ignore
+        gen_entropy = (
+            accelerator.reduce(gen_entropy, reduction="sum").item() / epoch_samples
+        )  # type: ignore
+        gen_spread = (
+            accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples
+        )  # type: ignore
 
         if scheduler is not None:
             scheduler.step()
@@ -186,16 +203,16 @@ def dafl_train(accelerator: Accelerator,
         if accelerator.is_main_process:
             epoch_time = time.perf_counter() - start_time
             history["student_loss"].append(model_epoch_loss.item())
-            history["student_lr"].append(student_optimizer.param_groups[0]['lr'])
+            history["student_lr"].append(student_optimizer.param_groups[0]["lr"])
             history["generator_loss"].append(gen_epoch_loss.item())
-            history["generator_lr"].append(generator_optimizer.param_groups[0]['lr'])
+            history["generator_lr"].append(generator_optimizer.param_groups[0]["lr"])
             history["gen_conf"].append(gen_conf)
             history["gen_entropy"].append(gen_entropy)
             history["gen_spread"].append(gen_spread)
             history["epoch_time"].append(epoch_time)
 
             if epoch % print_frequency == 0:
-                temp_message = f"Epoch {epoch+1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f},"
+                temp_message = f"Epoch {epoch + 1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f},"
                 temp_message += f" Generator confidence: {gen_conf:.4f}, Generator Entropy: {gen_entropy:.4f}, Generator spread: {gen_spread:.4f},"
                 temp_message += f" Generator Train Loss: {gen_epoch_loss:.4f}, Generator lr: {generator_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time:.2f}"
                 print(temp_message)
@@ -210,27 +227,39 @@ def dafl_train(accelerator: Accelerator,
                     augs=validation_metrics["validation_augs"],
                     criterion=torch.nn.CrossEntropyLoss(),
                     classes=validation_metrics["classes"],
-                    save_folder=None
+                    save_folder=None,
                 )
 
     accelerator.wait_for_everyone()
     if accelerator.is_main_process and save_location is not None:
         if save_student_model:
-            student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
+            student_model_name = (
+                f"{save_prefix}_student_model.pth"
+                if save_prefix
+                else "student_model.pth"
+            )
             student_model_savepath = save_location / student_model_name
             student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-            unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
+            unwrapped_student_model = accelerator.unwrap_model(
+                student_model, keep_torch_compile=False
+            )
             torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
 
         if save_generator:
-            generator_name = f"{save_prefix}_generator.pth" if save_prefix else "generator.pth"
+            generator_name = (
+                f"{save_prefix}_generator.pth" if save_prefix else "generator.pth"
+            )
             generator_savepath = save_location / generator_name
             generator_savepath.parent.mkdir(parents=True, exist_ok=True)
-            unwrapped_generator = accelerator.unwrap_model(generator, keep_torch_compile=False)
+            unwrapped_generator = accelerator.unwrap_model(
+                generator, keep_torch_compile=False
+            )
             torch.save(unwrapped_generator.state_dict(), generator_savepath)
 
         if save_history:
-            history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            history_name = (
+                f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            )
             history_savepath = save_location / history_name
             history_savepath.parent.mkdir(parents=True, exist_ok=True)
             data = {

@@ -22,9 +22,15 @@ class ZSKTLoss(torch.nn.Module):
         stage_percentages (list[float] | tuple[float], optional): Per-stage weight fractions for AT loss. Defaults to [0.25, 0.25, 0.25, 0.25].
         sign (float, optional): The sign and multiplier of the result (+1.0 for student, -1.0 for generator). Defaults to 1.0.
     """
-    def __init__(self, T: float=4.0, kd_gamma: float=1.0, at_gamma: float=128.0,
-              stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
-              sign: float=1.0):
+
+    def __init__(
+        self,
+        T: float = 4.0,
+        kd_gamma: float = 1.0,
+        at_gamma: float = 128.0,
+        stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+        sign: float = 1.0,
+    ):
         super().__init__()
         self.sign = sign
         self.T = T
@@ -32,10 +38,13 @@ class ZSKTLoss(torch.nn.Module):
         self.at_gamma = at_gamma
         self.stage_percentages = stage_percentages
 
-    def forward(self, student_output: torch.Tensor,
-                teacher_output: torch.Tensor,
-                student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-                teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...]) -> torch.Tensor:
+    def forward(
+        self,
+        student_output: torch.Tensor,
+        teacher_output: torch.Tensor,
+        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+        teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    ) -> torch.Tensor:
         """Computes combined ZSKT distillation loss.
 
         Args:
@@ -47,4 +56,13 @@ class ZSKTLoss(torch.nn.Module):
         Returns:
             torch.Tensor: Combined scalar loss scaled by sign.
         """
-        return self.sign * zskt_loss(student_output=student_output, teacher_output=teacher_output, student_stages=student_stages, teacher_stages=teacher_stages, T=self.T, kd_gamma=self.kd_gamma, at_gamma=self.at_gamma, stage_percentages=self.stage_percentages)
+        return self.sign * zskt_loss(
+            student_output=student_output,
+            teacher_output=teacher_output,
+            student_stages=student_stages,
+            teacher_stages=teacher_stages,
+            T=self.T,
+            kd_gamma=self.kd_gamma,
+            at_gamma=self.at_gamma,
+            stage_percentages=self.stage_percentages,
+        )

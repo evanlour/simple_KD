@@ -20,15 +20,23 @@ class DAFLLoss(torch.nn.Module):
         one_hot_gamma (float, optional): Multiplier for the teacher one-hot cross-entropy loss. Defaults to 1.0.
         info_entropy_gamma (float, optional): Multiplier for the batch information entropy loss. Defaults to 128.0.
     """
-    def __init__(self, feature_gamma: float=1.0, one_hot_gamma: float=1.0, info_entropy_gamma: float=128.0):
+
+    def __init__(
+        self,
+        feature_gamma: float = 1.0,
+        one_hot_gamma: float = 1.0,
+        info_entropy_gamma: float = 128.0,
+    ):
         super().__init__()
         self.feature_gamma = feature_gamma
         self.one_hot_gamma = one_hot_gamma
         self.info_entropy_gamma = info_entropy_gamma
 
-    def forward(self,
-                teacher_output: torch.Tensor,
-                teacher_stages: torch.Tensor,) -> torch.Tensor:
+    def forward(
+        self,
+        teacher_output: torch.Tensor,
+        teacher_stages: torch.Tensor,
+    ) -> torch.Tensor:
         """Computes the combined DAFL loss for the generator.
 
         Args:
@@ -38,5 +46,10 @@ class DAFLLoss(torch.nn.Module):
         Returns:
             torch.Tensor: The total scalar generator loss.
         """
-        return dafl_loss(teacher_output=teacher_output, teacher_stages=teacher_stages,
-                        info_entropy_gamma=self.info_entropy_gamma, one_hot_gamma=self.one_hot_gamma, feature_gamma=self.feature_gamma)
+        return dafl_loss(
+            teacher_output=teacher_output,
+            teacher_stages=teacher_stages,
+            info_entropy_gamma=self.info_entropy_gamma,
+            one_hot_gamma=self.one_hot_gamma,
+            feature_gamma=self.feature_gamma,
+        )

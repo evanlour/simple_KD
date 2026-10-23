@@ -12,6 +12,7 @@ class SkepticalClassifier(torch.nn.Module):
         in_channels (int): Input channel dimension of the intermediate feature stage.
         num_classes (int): Number of target classification classes.
     """
+
     def __init__(self, in_channels: int, num_classes: int):
         super().__init__()
         self.pool = torch.nn.AdaptiveAvgPool2d(1)
@@ -30,6 +31,7 @@ class SkepticalClassifier(torch.nn.Module):
         x = torch.flatten(x, 1)
         return self.fc(x)
 
+
 class SkepticalLoss(torch.nn.Module):
     """Wrapper module for Skeptical Student distillation loss.
 
@@ -45,15 +47,20 @@ class SkepticalLoss(torch.nn.Module):
         kd_gamma (float, optional): Weight multiplier for standard KD loss. Defaults to 0.5.
         in_kd_gamma (float, optional): Weight multiplier for intermediate internal KD loss. Defaults to 1.0.
     """
+
     def __init__(self, T: float = 4.0, kd_gamma: float = 0.5, in_kd_gamma: float = 1.0):
         super().__init__()
         self.T = T
         self.kd_gamma = kd_gamma
         self.in_kd_gamma = in_kd_gamma
 
-    def forward(self, student_output: torch.Tensor, teacher_output: torch.Tensor,
-                student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-                aux_classifier: torch.nn.Module) -> torch.Tensor:
+    def forward(
+        self,
+        student_output: torch.Tensor,
+        teacher_output: torch.Tensor,
+        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+        aux_classifier: torch.nn.Module,
+    ) -> torch.Tensor:
         """Computes the skeptical distillation loss.
 
         Args:
@@ -65,4 +72,12 @@ class SkepticalLoss(torch.nn.Module):
         Returns:
             torch.Tensor: Combined skeptical distillation loss.
         """
-        return skeptical_loss(student_output=student_output, teacher_output=teacher_output, student_stages=student_stages, aux_classifier=aux_classifier, T=self.T, kd_gamma=self.kd_gamma, in_kd_gamma=self.in_kd_gamma)
+        return skeptical_loss(
+            student_output=student_output,
+            teacher_output=teacher_output,
+            student_stages=student_stages,
+            aux_classifier=aux_classifier,
+            T=self.T,
+            kd_gamma=self.kd_gamma,
+            in_kd_gamma=self.in_kd_gamma,
+        )

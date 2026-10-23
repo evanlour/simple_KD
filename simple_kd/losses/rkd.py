@@ -18,12 +18,21 @@ class RKDAngleLoss(torch.nn.Module):
         gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.
         stage_percentages (list[float] | tuple[float, ...], optional): Relative weights for each stage. Defaults to (0.25, 0.25, 0.25, 0.25).
     """
-    def __init__(self, gamma: float = 64.0, stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25)):
+
+    def __init__(
+        self,
+        gamma: float = 64.0,
+        stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+    ):
         super().__init__()
         self.stage_percentages = stage_percentages
         self.gamma = gamma
 
-    def forward(self, student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...], teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...]) -> torch.Tensor:
+    def forward(
+        self,
+        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+        teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    ) -> torch.Tensor:
         """Computes RKD angle loss across stages.
 
         Args:
@@ -33,7 +42,13 @@ class RKDAngleLoss(torch.nn.Module):
         Returns:
             torch.Tensor: Scalar angle-wise relational loss.
         """
-        return rkd_angle_loss(student_stages=student_stages, teacher_stages=teacher_stages, gamma=self.gamma, stage_percentages=self.stage_percentages)
+        return rkd_angle_loss(
+            student_stages=student_stages,
+            teacher_stages=teacher_stages,
+            gamma=self.gamma,
+            stage_percentages=self.stage_percentages,
+        )
+
 
 class RKDDistLoss(torch.nn.Module):
     """Wrapper module for Relational Knowledge Distillation (RKD): Distance-wise loss.
@@ -50,12 +65,21 @@ class RKDDistLoss(torch.nn.Module):
         gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.
         stage_percentages (list[float] | tuple[float, ...], optional): Relative weights for each stage. Defaults to (0.25, 0.25, 0.25, 0.25).
     """
-    def __init__(self, gamma: float = 64.0, stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25)):
+
+    def __init__(
+        self,
+        gamma: float = 64.0,
+        stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+    ):
         super().__init__()
         self.stage_percentages = stage_percentages
         self.gamma = gamma
 
-    def forward(self, student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...], teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...]) -> torch.Tensor:
+    def forward(
+        self,
+        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+        teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    ) -> torch.Tensor:
         """Computes RKD distance loss across stages.
 
         Args:
@@ -65,4 +89,9 @@ class RKDDistLoss(torch.nn.Module):
         Returns:
             torch.Tensor: Scalar distance-wise relational loss.
         """
-        return rkd_dist_loss(student_stages=student_stages, teacher_stages=teacher_stages, gamma=self.gamma, stage_percentages=self.stage_percentages)
+        return rkd_dist_loss(
+            student_stages=student_stages,
+            teacher_stages=teacher_stages,
+            gamma=self.gamma,
+            stage_percentages=self.stage_percentages,
+        )

@@ -9,10 +9,13 @@ def _get_sp_feats(stage: torch.Tensor) -> torch.Tensor:
     feats = F.normalize(feats, p=2, dim=1)
     return feats
 
-def sp_loss(student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-           teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-           stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
-           gamma: float = 64.0) -> torch.Tensor:
+
+def sp_loss(
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
+    gamma: float = 64.0,
+) -> torch.Tensor:
     """Code implementation of the Similarity Preservation (SP) method.
 
     The original paper can be found at https://arxiv.org/pdf/1907.09682.
@@ -31,8 +34,10 @@ def sp_loss(student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
         torch.Tensor: The distillation loss.
     """
     loss = 0
-    for teacher_stage, student_stage, stage_percentage in zip(teacher_stages, student_stages, stage_percentages):
+    for teacher_stage, student_stage, stage_percentage in zip(
+        teacher_stages, student_stages, stage_percentages
+    ):
         teacher_feats = _get_sp_feats(teacher_stage)
         student_feats = _get_sp_feats(student_stage)
         loss += F.mse_loss(student_feats, teacher_feats) * stage_percentage
-    return loss * gamma # type: ignore
+    return loss * gamma  # type: ignore

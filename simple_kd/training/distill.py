@@ -14,34 +14,34 @@ def _filter_kwargs_for_callable(fn, kwargs: dict) -> dict:
     target = getattr(fn, "forward", fn)
     sig = inspect.signature(target)
     valid_names = set(sig.parameters.keys())
-    return {
-        k: v for k, v in kwargs.items()
-        if k in valid_names and v is not None
-    }
+    return {k: v for k, v in kwargs.items() if k in valid_names and v is not None}
 
-def distill(accelerator: Accelerator,
-          teacher_model: torch.nn.Module,
-          student_model: torch.nn.Module,
-          train_loader: torch.utils.data.DataLoader,
-          student_optimizer: torch.optim.Optimizer,
-          criterion: torch.nn.Module,
-          distillation_criterion: torch.nn.Module,
-          student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] =(),
-          teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] =(),
-          teacher_optimizer: torch.optim.Optimizer | None = None,
-          epochs: int = 10,
-          epochs_per_val: int = 1,
-          clipper: SimpleGradClip | None = None,
-          augmentations: torch.nn.Module | None=None,
-          val_augmentations: torch.nn.Module | None=None,
-          teacher_scheduler: torch.optim.lr_scheduler.LRScheduler | None=None,
-          student_scheduler: torch.optim.lr_scheduler.LRScheduler | None=None,
-          val_loader: torch.utils.data.DataLoader | None=None,
-          save_location: Path | None = None,
-          save_prefix: str = "",
-          save_student_model: bool = True,
-          save_teacher_model: bool = False,
-          save_history: bool = True) -> dict:
+
+def distill(
+    accelerator: Accelerator,
+    teacher_model: torch.nn.Module,
+    student_model: torch.nn.Module,
+    train_loader: torch.utils.data.DataLoader,
+    student_optimizer: torch.optim.Optimizer,
+    criterion: torch.nn.Module,
+    distillation_criterion: torch.nn.Module,
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    teacher_optimizer: torch.optim.Optimizer | None = None,
+    epochs: int = 10,
+    epochs_per_val: int = 1,
+    clipper: SimpleGradClip | None = None,
+    augmentations: torch.nn.Module | None = None,
+    val_augmentations: torch.nn.Module | None = None,
+    teacher_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    student_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    val_loader: torch.utils.data.DataLoader | None = None,
+    save_location: Path | None = None,
+    save_prefix: str = "",
+    save_student_model: bool = True,
+    save_teacher_model: bool = False,
+    save_history: bool = True,
+) -> dict:
     """Distills knowledge from a teacher model to a student model for classification tasks.
 
     Args:
@@ -82,21 +82,32 @@ def distill(accelerator: Accelerator,
             - "lr": Current student learning rate per epoch.
             - "epoch_time": Total elapsed time in seconds per epoch.
     """
-    history = {"student_train_loss": [], "student_train_accuracy": [], "teacher_train_loss": [], "teacher_train_accuracy": [],
-        "student_val_loss": [], "student_val_accuracy": [], "teacher_val_loss": [], "teacher_val_accuracy": [],
-        "lr": [], "epoch_time": []}
+    history = {
+        "student_train_loss": [],
+        "student_train_accuracy": [],
+        "teacher_train_loss": [],
+        "teacher_train_accuracy": [],
+        "student_val_loss": [],
+        "student_val_accuracy": [],
+        "teacher_val_loss": [],
+        "teacher_val_accuracy": [],
+        "lr": [],
+        "epoch_time": [],
+    }
 
-    for epoch in range (epochs):
+    for epoch in range(epochs):
         student_train_loss = torch.tensor(0.0, device=accelerator.device)
         student_train_correct = torch.tensor(0, device=accelerator.device)
         train_total = torch.tensor(0, device=accelerator.device)
         teacher_train_loss = torch.tensor(0.0, device=accelerator.device)
         teacher_train_correct = torch.tensor(0, device=accelerator.device)
 
-        temp_message = f'Start of epoch {epoch + 1}'
+        temp_message = f"Start of epoch {epoch + 1}"
         start_time = time.perf_counter()
         student_model.train()
-        if teacher_optimizer is not None: # Online distillation when teacher optimizer is used
+        if (
+            teacher_optimizer is not None
+        ):  # Online distillation when teacher optimizer is used
             teacher_model.train()
         else:
             teacher_model.eval()
@@ -132,13 +143,19 @@ def distill(accelerator: Accelerator,
 
                 available_args = {
                     "student_output": student_output,
-                    "teacher_output": teacher_output.detach() if teacher_output is not None else None,
+                    "teacher_output": teacher_output.detach()
+                    if teacher_output is not None
+                    else None,
                     "student_stages": student_stages,
-                    "teacher_stages": [v.detach() for v in teacher_stages] if teacher_stages is not None else None,
+                    "teacher_stages": [v.detach() for v in teacher_stages]
+                    if teacher_stages is not None
+                    else None,
                     "labels": labels,
                     "images": inputs,
                 }
-                filtered_args = _filter_kwargs_for_callable(distillation_criterion, available_args)
+                filtered_args = _filter_kwargs_for_callable(
+                    distillation_criterion, available_args
+                )
                 distill_loss = distillation_criterion(**filtered_args)
 
                 student_loss = distill_loss + student_ce_loss
@@ -167,21 +184,33 @@ def distill(accelerator: Accelerator,
             student_train_loss += student_loss.detach() * current_batch_size
             student_train_correct += (student_predicted == labels).sum()
             # teacher statistics
-            _, teacher_predicted = torch.max(teacher_output, 1) # type: ignore
+            _, teacher_predicted = torch.max(teacher_output, 1)  # type: ignore
             teacher_train_loss += teacher_loss.detach() * current_batch_size
             teacher_train_correct += (teacher_predicted == labels).sum()
 
-        epoch_train_samples = accelerator.reduce(train_total, reduction="sum").item()   # type: ignore
+        epoch_train_samples = accelerator.reduce(train_total, reduction="sum").item()  # type: ignore
         # Final student statistics
-        student_epoch_train_loss = accelerator.reduce(student_train_loss, reduction="sum").item()    # type: ignore
+        student_epoch_train_loss = accelerator.reduce(
+            student_train_loss, reduction="sum"
+        ).item()  # type: ignore
         student_epoch_train_loss = student_epoch_train_loss / epoch_train_samples
-        student_epoch_train_correct = accelerator.reduce(student_train_correct, reduction="sum").item() # type: ignore
-        student_epoch_train_accuracy = 100.0 * student_epoch_train_correct / epoch_train_samples # type: ignore
+        student_epoch_train_correct = accelerator.reduce(
+            student_train_correct, reduction="sum"
+        ).item()  # type: ignore
+        student_epoch_train_accuracy = (
+            100.0 * student_epoch_train_correct / epoch_train_samples
+        )  # type: ignore
         # Final teacher statistics
-        teacher_epoch_train_loss    = accelerator.reduce(teacher_train_loss, reduction="sum").item()    # type: ignore
+        teacher_epoch_train_loss = accelerator.reduce(
+            teacher_train_loss, reduction="sum"
+        ).item()  # type: ignore
         teacher_epoch_train_loss = teacher_epoch_train_loss / epoch_train_samples
-        teacher_epoch_train_correct = accelerator.reduce(teacher_train_correct, reduction="sum").item() # type: ignore
-        teacher_epoch_train_accuracy = 100.0 * teacher_epoch_train_correct / epoch_train_samples # type: ignore
+        teacher_epoch_train_correct = accelerator.reduce(
+            teacher_train_correct, reduction="sum"
+        ).item()  # type: ignore
+        teacher_epoch_train_accuracy = (
+            100.0 * teacher_epoch_train_correct / epoch_train_samples
+        )  # type: ignore
 
         # Validation Phase
         student_epoch_val_loss = torch.tensor(0.0)
@@ -224,17 +253,31 @@ def distill(accelerator: Accelerator,
                     teacher_val_loss += teacher_loss * current_batch_size
                     teacher_val_correct += (teacher_predicted == labels).sum()
 
-                epoch_val_samples = accelerator.reduce(val_total, reduction="sum").item()   # type: ignore
+                epoch_val_samples = accelerator.reduce(
+                    val_total, reduction="sum"
+                ).item()  # type: ignore
                 # Final student statistics
-                student_epoch_val_loss = accelerator.reduce(student_val_loss, reduction="sum").item()    # type: ignore
+                student_epoch_val_loss = accelerator.reduce(
+                    student_val_loss, reduction="sum"
+                ).item()  # type: ignore
                 student_epoch_val_loss = student_epoch_val_loss / epoch_val_samples
-                student_epoch_val_correct = accelerator.reduce(student_val_correct, reduction="sum").item() # type: ignore
-                student_epoch_val_accuracy = 100.0 * student_epoch_val_correct / epoch_val_samples # type: ignore
+                student_epoch_val_correct = accelerator.reduce(
+                    student_val_correct, reduction="sum"
+                ).item()  # type: ignore
+                student_epoch_val_accuracy = (
+                    100.0 * student_epoch_val_correct / epoch_val_samples
+                )  # type: ignore
                 # Final teacher statistics
-                teacher_epoch_val_loss    = accelerator.reduce(teacher_val_loss, reduction="sum").item()    # type: ignore
+                teacher_epoch_val_loss = accelerator.reduce(
+                    teacher_val_loss, reduction="sum"
+                ).item()  # type: ignore
                 teacher_epoch_val_loss = teacher_epoch_val_loss / epoch_val_samples
-                teacher_epoch_val_correct = accelerator.reduce(teacher_val_correct, reduction="sum").item() # type: ignore
-                teacher_epoch_val_accuracy = 100.0 * teacher_epoch_val_correct / epoch_val_samples # type: ignore
+                teacher_epoch_val_correct = accelerator.reduce(
+                    teacher_val_correct, reduction="sum"
+                ).item()  # type: ignore
+                teacher_epoch_val_accuracy = (
+                    100.0 * teacher_epoch_val_correct / epoch_val_samples
+                )  # type: ignore
 
         if student_scheduler is not None:
             student_scheduler.step()
@@ -244,7 +287,7 @@ def distill(accelerator: Accelerator,
         if accelerator.is_main_process:
             epoch_time = time.perf_counter() - start_time
             # Print both loss and accuracy at the end of each epoch
-            temp_message = f"Epoch {epoch+1}/{epochs} Student Train Loss: {student_epoch_train_loss:.4f}, Student Train Acc: {student_epoch_train_accuracy:.2f}%,"
+            temp_message = f"Epoch {epoch + 1}/{epochs} Student Train Loss: {student_epoch_train_loss:.4f}, Student Train Acc: {student_epoch_train_accuracy:.2f}%,"
             temp_message += f" Teacher Train Loss: {teacher_epoch_train_loss:.4f}, Teacher Train Acc: {teacher_epoch_train_accuracy:.2f}%,"
             if val_loader is not None:
                 if epoch % epochs_per_val == 0:
@@ -255,9 +298,13 @@ def distill(accelerator: Accelerator,
                     history["student_val_loss"].append(student_epoch_val_loss)
                     history["teacher_val_loss"].append(teacher_epoch_val_loss)
                 else:
-                    history["student_val_accuracy"].append(history["student_val_accuracy"][-1])
+                    history["student_val_accuracy"].append(
+                        history["student_val_accuracy"][-1]
+                    )
                     history["student_val_loss"].append(history["student_val_loss"][-1])
-                    history["teacher_val_accuracy"].append(history["teacher_val_accuracy"][-1])
+                    history["teacher_val_accuracy"].append(
+                        history["teacher_val_accuracy"][-1]
+                    )
                     history["teacher_val_loss"].append(history["teacher_val_loss"][-1])
             temp_message += f"Training time: {epoch_time:.2f} Current Student Learning Rate: {student_optimizer.param_groups[0]['lr']:.6f}"
 
@@ -266,27 +313,41 @@ def distill(accelerator: Accelerator,
             history["teacher_train_accuracy"].append(teacher_epoch_train_accuracy)
             history["teacher_train_loss"].append(teacher_epoch_train_loss)
             history["epoch_time"].append(epoch_time)
-            history["lr"].append(student_optimizer.param_groups[0]['lr'])
+            history["lr"].append(student_optimizer.param_groups[0]["lr"])
             print(temp_message)
 
     accelerator.wait_for_everyone()
     if accelerator.is_main_process and save_location is not None:
         if save_student_model:
-            student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
+            student_model_name = (
+                f"{save_prefix}_student_model.pth"
+                if save_prefix
+                else "student_model.pth"
+            )
             student_model_savepath = save_location / student_model_name
             student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-            unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
+            unwrapped_student_model = accelerator.unwrap_model(
+                student_model, keep_torch_compile=False
+            )
             torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
 
         if save_teacher_model:
-            teacher_model_name = f"{save_prefix}_teacher_model.pth" if save_prefix else "teacher_model.pth"
+            teacher_model_name = (
+                f"{save_prefix}_teacher_model.pth"
+                if save_prefix
+                else "teacher_model.pth"
+            )
             teacher_model_savepath = save_location / teacher_model_name
             teacher_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-            unwrapped_teacher_model = accelerator.unwrap_model(teacher_model, keep_torch_compile=False)
+            unwrapped_teacher_model = accelerator.unwrap_model(
+                teacher_model, keep_torch_compile=False
+            )
             torch.save(unwrapped_teacher_model.state_dict(), teacher_model_savepath)
 
         if save_history:
-            history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            history_name = (
+                f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            )
             history_savepath = save_location / history_name
             history_savepath.parent.mkdir(parents=True, exist_ok=True)
             data = {

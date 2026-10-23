@@ -16,11 +16,11 @@ def profile_training_loop(
     optimizer: torch.optim.Optimizer,
     criterion: torch.nn.Module,
     train_loader: torch.utils.data.DataLoader,
-    val_loader: torch.utils.data.DataLoader | None=None,
-    augmentations: torch.nn.Module | None=None,
-    val_augmentations: torch.nn.Module | None=None,
-    epochs:int =1,
-    log_dir:str ="./profile_logs"
+    val_loader: torch.utils.data.DataLoader | None = None,
+    augmentations: torch.nn.Module | None = None,
+    val_augmentations: torch.nn.Module | None = None,
+    epochs: int = 1,
+    log_dir: str = "./profile_logs",
 ):
     """A simplified training function designed around profiling CPU and GPU usage. Use to optimize batch size and augmentations.
 
@@ -39,11 +39,12 @@ def profile_training_loop(
 
     batches_per_epoch = len(train_loader)
     my_schedule = schedule(
-        skip_first=batches_per_epoch + 5, # Skip the first epoch and 5 batches to avoid warm-up overhead
-        wait=2,                           # Wait 2 batches before starting warm-up
-        warmup=2,                         # Warm up profiler for 2 batches
-        active=4,                         # Record traces for 4 active batches
-        repeat=1                          # Run the cycle once
+        skip_first=batches_per_epoch
+        + 5,  # Skip the first epoch and 5 batches to avoid warm-up overhead
+        wait=2,  # Wait 2 batches before starting warm-up
+        warmup=2,  # Warm up profiler for 2 batches
+        active=4,  # Record traces for 4 active batches
+        repeat=1,  # Run the cycle once
     )
 
     # Save per-rank traces
@@ -55,8 +56,8 @@ def profile_training_loop(
         schedule=my_schedule,
         on_trace_ready=trace_handler,
         record_shapes=True,
-        profile_memory=True, # Optional: trace VRAM usage
-        with_stack=False     # True adds substantial overhead
+        profile_memory=True,  # Optional: trace VRAM usage
+        with_stack=False,  # True adds substantial overhead
     ) as prof:
         for _ in range(epochs):
             model.train()
@@ -104,7 +105,10 @@ def profile_training_loop(
 
     # Print summary table from rank 0 only
     if accelerator.is_main_process:
-        accelerator.print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=15))
+        accelerator.print(
+            prof.key_averages().table(sort_by="cuda_time_total", row_limit=15)
+        )
+
 
 def profile_distillation_loop():
     pass

@@ -2,10 +2,12 @@ import torch
 import torch.nn.functional as F
 
 
-def kd_loss(student_output: torch.Tensor,
-        teacher_output: torch.Tensor,
-        T: float = 4.0,
-        gamma: float = 1.0) -> torch.Tensor:
+def kd_loss(
+    student_output: torch.Tensor,
+    teacher_output: torch.Tensor,
+    T: float = 4.0,
+    gamma: float = 1.0,
+) -> torch.Tensor:
     """The original knowledge distillation process.
 
     The original paper can be found at https://arxiv.org/pdf/1503.02531.
@@ -22,4 +24,4 @@ def kd_loss(student_output: torch.Tensor,
     log_soft_student = F.log_softmax(student_output / T, dim=1)
     soft_teacher = F.softmax(teacher_output / T, dim=1)
     lkd_loss = F.kl_div(log_soft_student, soft_teacher, reduction="batchmean")
-    return lkd_loss * (T ** 2) * gamma
+    return lkd_loss * (T**2) * gamma

@@ -36,7 +36,7 @@ def odsd_train(
     save_location: Path | None = None,
     save_prefix: str = "",
     save_student_model: bool = True,
-    save_history: bool = True
+    save_history: bool = True,
 ) -> dict:
     """Trains a student model The ODSD step 2 training pipeline.
 
@@ -121,12 +121,11 @@ def odsd_train(
             batch_size = augmented_images.size(0)
 
             with accelerator.accumulate(student_model):
-
                 with torch.no_grad():
-                    teacher_output = teacher_model(augmented_images) # type: ignore
+                    teacher_output = teacher_model(augmented_images)  # type: ignore
                     teacher_basic_output = teacher_model(basic_images)
 
-                student_output = student_model(augmented_images) # type: ignore
+                student_output = student_model(augmented_images)  # type: ignore
                 student_basic_output = student_model(basic_images)
 
                 loss, loss_dict = criterion(
@@ -153,19 +152,19 @@ def odsd_train(
                 )
                 train_total += batch_size
 
-        epoch_samples = accelerator.reduce(train_total, reduction="sum").item() # type: ignore
+        epoch_samples = accelerator.reduce(train_total, reduction="sum").item()  # type: ignore
         epoch_student_loss = (
-            accelerator.reduce(total_train_loss, reduction="sum").item() / epoch_samples # type: ignore
+            accelerator.reduce(total_train_loss, reduction="sum").item() / epoch_samples  # type: ignore
         )
         epoch_kd_loss = (
-            accelerator.reduce(total_kd_loss, reduction="sum").item() / epoch_samples # type: ignore
+            accelerator.reduce(total_kd_loss, reduction="sum").item() / epoch_samples  # type: ignore
         )
         epoch_spatial_loss = (
-            accelerator.reduce(total_spatial_loss, reduction="sum").item() # type: ignore
+            accelerator.reduce(total_spatial_loss, reduction="sum").item()  # type: ignore
             / epoch_samples
         )
         epoch_relational_loss = (
-            accelerator.reduce(total_relational_loss, reduction="sum").item() # type: ignore
+            accelerator.reduce(total_relational_loss, reduction="sum").item()  # type: ignore
             / epoch_samples
         )
 
@@ -207,14 +206,22 @@ def odsd_train(
     accelerator.wait_for_everyone()
     if accelerator.is_main_process and save_location is not None:
         if save_student_model:
-            student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
+            student_model_name = (
+                f"{save_prefix}_student_model.pth"
+                if save_prefix
+                else "student_model.pth"
+            )
             student_model_savepath = save_location / student_model_name
             student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-            unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
+            unwrapped_student_model = accelerator.unwrap_model(
+                student_model, keep_torch_compile=False
+            )
             torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
 
         if save_history:
-            history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            history_name = (
+                f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            )
             history_savepath = save_location / history_name
             history_savepath.parent.mkdir(parents=True, exist_ok=True)
             data = {

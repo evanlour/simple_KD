@@ -17,13 +17,23 @@ class SSPLoss(torch.nn.Module):
         stage_percentages (tuple[float, ...] | list[float], optional): Relative weights for each network stage. Defaults to (0.25, 0.25, 0.25, 0.25).
         sort_channels (bool, optional): Whether to sort channel activations in descending order before comparison. Defaults to True.
     """
-    def __init__(self, gamma: float = 64.0, stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25), sort_channels: bool = True):
+
+    def __init__(
+        self,
+        gamma: float = 64.0,
+        stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
+        sort_channels: bool = True,
+    ):
         super().__init__()
         self.gamma = gamma
         self.stage_percentages = stage_percentages
         self.sort_channels = sort_channels
 
-    def forward(self, student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...], teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...]) -> torch.Tensor:
+    def forward(
+        self,
+        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+        teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    ) -> torch.Tensor:
         """Computes SSP loss across intermediate stages.
 
         Args:
@@ -33,4 +43,10 @@ class SSPLoss(torch.nn.Module):
         Returns:
             torch.Tensor: Scalar SSP loss.
         """
-        return ssp_loss(student_stages=student_stages, teacher_stages=teacher_stages, gamma=self.gamma, stage_percentages=self.stage_percentages, sort_channels=self.sort_channels)
+        return ssp_loss(
+            student_stages=student_stages,
+            teacher_stages=teacher_stages,
+            gamma=self.gamma,
+            stage_percentages=self.stage_percentages,
+            sort_channels=self.sort_channels,
+        )

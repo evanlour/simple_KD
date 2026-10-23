@@ -8,22 +8,24 @@ from accelerate import Accelerator
 from simple_kd.utils import SimpleGradClip
 
 
-def train(accelerator: Accelerator,
-          model: torch.nn.Module,
-          train_loader: torch.utils.data.DataLoader,
-          optimizer: torch.optim.Optimizer,
-          criterion: torch.nn.Module,
-          epochs: int = 10,
-          epochs_per_val: int = 1,
-          clipper: SimpleGradClip | None = None,
-          augmentations: torch.nn.Module | None =None,
-          val_augmentations: torch.nn.Module | None =None,
-          scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-          val_loader: torch.utils.data.DataLoader | None =None,
-          save_location: Path | None = None,
-          save_prefix: str = "",
-          save_model: bool = True,
-          save_history: bool = True) -> dict:
+def train(
+    accelerator: Accelerator,
+    model: torch.nn.Module,
+    train_loader: torch.utils.data.DataLoader,
+    optimizer: torch.optim.Optimizer,
+    criterion: torch.nn.Module,
+    epochs: int = 10,
+    epochs_per_val: int = 1,
+    clipper: SimpleGradClip | None = None,
+    augmentations: torch.nn.Module | None = None,
+    val_augmentations: torch.nn.Module | None = None,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    val_loader: torch.utils.data.DataLoader | None = None,
+    save_location: Path | None = None,
+    save_prefix: str = "",
+    save_model: bool = True,
+    save_history: bool = True,
+) -> dict:
     """A concise training function for a neural model, configured primarily around classification tasks.
 
     Args:
@@ -54,16 +56,21 @@ def train(accelerator: Accelerator,
             - "epoch_time": Total elapsed time in seconds per epoch.
     """
 
-    history = {"train_loss": [], "train_accuracy": [],
-        "val_loss": [], "val_accuracy": [],
-        "lr": [], "epoch_time": []}
+    history = {
+        "train_loss": [],
+        "train_accuracy": [],
+        "val_loss": [],
+        "val_accuracy": [],
+        "lr": [],
+        "epoch_time": [],
+    }
 
-    for epoch in range (epochs):
+    for epoch in range(epochs):
         train_loss = torch.tensor(0.0, device=accelerator.device)
         train_correct = torch.tensor(0, device=accelerator.device)
         train_total = torch.tensor(0, device=accelerator.device)
 
-        temp_message = f'Start of epoch {epoch + 1}'
+        temp_message = f"Start of epoch {epoch + 1}"
         start_time = time.perf_counter()
         model.train()
         for batch in train_loader:
@@ -92,15 +99,17 @@ def train(accelerator: Accelerator,
             optimizer.zero_grad(set_to_none=True)
 
             # Compute training loss and accuracy
-            _, predicted = torch.max(outputs, 1)  # Get the index of the max logit (predicted class)
+            _, predicted = torch.max(
+                outputs, 1
+            )  # Get the index of the max logit (predicted class)
             current_batch_size = labels.size(0)
             train_loss += loss.detach() * current_batch_size
             train_correct += (predicted == labels).sum()
             train_total += current_batch_size
 
-        epoch_train_loss    = accelerator.reduce(train_loss, reduction="sum").item()    # type: ignore
-        epoch_train_correct = accelerator.reduce(train_correct, reduction="sum").item() # type: ignore
-        epoch_train_samples = accelerator.reduce(train_total, reduction="sum").item()   # type: ignore
+        epoch_train_loss = accelerator.reduce(train_loss, reduction="sum").item()  # type: ignore
+        epoch_train_correct = accelerator.reduce(train_correct, reduction="sum").item()  # type: ignore
+        epoch_train_samples = accelerator.reduce(train_total, reduction="sum").item()  # type: ignore
 
         # Final epoch statistics
         epoch_train_loss = epoch_train_loss / epoch_train_samples
@@ -131,14 +140,20 @@ def train(accelerator: Accelerator,
 
                     # Compute val loss and accuracy
                     _, predicted = torch.max(outputs, 1)
-                    current_batch_size = torch.tensor(labels.size(0), device=accelerator.device)
+                    current_batch_size = torch.tensor(
+                        labels.size(0), device=accelerator.device
+                    )
                     val_loss += loss.detach() * current_batch_size
                     val_correct += (predicted == labels).sum()
                     val_total += current_batch_size
 
-                epoch_val_loss    = accelerator.reduce(val_loss, reduction="sum").item()    # type: ignore
-                epoch_val_correct = accelerator.reduce(val_correct, reduction="sum").item() # type: ignore
-                epoch_val_samples = accelerator.reduce(val_total, reduction="sum").item()   # type: ignore
+                epoch_val_loss = accelerator.reduce(val_loss, reduction="sum").item()  # type: ignore
+                epoch_val_correct = accelerator.reduce(
+                    val_correct, reduction="sum"
+                ).item()  # type: ignore
+                epoch_val_samples = accelerator.reduce(
+                    val_total, reduction="sum"
+                ).item()  # type: ignore
 
                 epoch_val_loss = epoch_val_loss / epoch_val_samples
                 epoch_val_accuracy = 100.0 * epoch_val_correct / epoch_val_samples
@@ -149,7 +164,7 @@ def train(accelerator: Accelerator,
         if accelerator.is_main_process:
             epoch_time = time.perf_counter() - start_time
             # Print both loss and accuracy at the end of each epoch
-            temp_message = f"Epoch {epoch+1}/{epochs} Train Loss: {epoch_train_loss:.4f}, Train Acc: {epoch_train_accuracy:.2f}%,"
+            temp_message = f"Epoch {epoch + 1}/{epochs} Train Loss: {epoch_train_loss:.4f}, Train Acc: {epoch_train_accuracy:.2f}%,"
             if val_loader is not None:
                 if epoch % epochs_per_val == 0:
                     temp_message += f" Val Loss: {epoch_val_loss:.4f}, Val Acc: {epoch_val_accuracy:.2f}%,"
@@ -163,7 +178,7 @@ def train(accelerator: Accelerator,
             history["train_accuracy"].append(epoch_train_accuracy)
             history["train_loss"].append(epoch_train_loss)
             history["epoch_time"].append(epoch_time)
-            history["lr"].append(optimizer.param_groups[0]['lr'])
+            history["lr"].append(optimizer.param_groups[0]["lr"])
             print(temp_message)
 
     accelerator.wait_for_everyone()
@@ -176,7 +191,9 @@ def train(accelerator: Accelerator,
             torch.save(unwrapped_model.state_dict(), model_savepath)
 
         if save_history:
-            history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            history_name = (
+                f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            )
             history_savepath = save_location / history_name
             history_savepath.parent.mkdir(parents=True, exist_ok=True)
             data = {

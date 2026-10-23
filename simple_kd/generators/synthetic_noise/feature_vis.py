@@ -19,11 +19,10 @@ class ColorDecorrelator:
     and encouraging natural color palettes during feature inversion.
     """
 
-    COLOR_CORR = torch.tensor([
-        [0.56,  0.22, -0.04],
-        [0.58,  0.72, -0.10],
-        [0.58, -0.65,  0.99]
-    ], dtype=torch.float32)
+    COLOR_CORR = torch.tensor(
+        [[0.56, 0.22, -0.04], [0.58, 0.72, -0.10], [0.58, -0.65, 0.99]],
+        dtype=torch.float32,
+    )
 
     def __init__(self, device: torch.device):
         """Initializes normalized color decorrelation matrix on the target device.
@@ -45,6 +44,7 @@ class ColorDecorrelator:
         """
         rgb = torch.einsum("bchw,cd->bdhw", latent_spatial, self.mat)
         return torch.sigmoid(rgb)
+
 
 class FFTImage(torch.nn.Module):
     """Fourier-basis image parameterization with a 1/f frequency decay prior.
@@ -74,7 +74,10 @@ class FFTImage(torch.nn.Module):
 
         # Trainable Fourier spectrum
         self.spectrum = torch.nn.Parameter(
-            torch.randn(batch_size, 3, h, w // 2 + 1, dtype=torch.cfloat, device=self.device) * 0.01
+            torch.randn(
+                batch_size, 3, h, w // 2 + 1, dtype=torch.cfloat, device=self.device
+            )
+            * 0.01
         )
 
     def forward(self) -> torch.Tensor:
@@ -86,7 +89,10 @@ class FFTImage(torch.nn.Module):
         scaled_spectrum = self.spectrum * self.scale
         return torch.fft.irfft2(scaled_spectrum, s=(self.h, self.w), norm="ortho")
 
-def generate_feature_combinations(samples: int, embedding_size: int, max_order: int = 3) -> list[list[int]]:
+
+def generate_feature_combinations(
+    samples: int, embedding_size: int, max_order: int = 3
+) -> list[list[int]]:
     """Generates neuron index combinations of orders 1 through max_order.
 
     Args:
@@ -105,6 +111,7 @@ def generate_feature_combinations(samples: int, embedding_size: int, max_order: 
             if len(combos) == samples:
                 return combos
     return combos
+
 
 def generate_feature_samples(
     model: torch.nn.Module,
@@ -164,17 +171,24 @@ def generate_feature_samples(
         normed = (jittered - mean) / std
         _ = model(normed)
 
-        act = features[0].mean(dim=(-2, -1)) # Spatial average pooling: (B, 512, 7, 7) -> (B, 512)
+        act = features[0].mean(
+            dim=(-2, -1)
+        )  # Spatial average pooling: (B, 512, 7, 7) -> (B, 512)
 
-        loss = -torch.stack([act[i, combo].mean() for i, combo in enumerate(targets)]).mean()
+        loss = -torch.stack(
+            [act[i, combo].mean() for i, combo in enumerate(targets)]
+        ).mean()
 
         loss.backward()
         optimizer.step()
 
     with torch.no_grad():
         final_rgb = decorrelator.to_rgb(fft_img()).clamp(0, 1)
-        np_imgs = (final_rgb.permute(0, 2, 3, 1).cpu().numpy() * 255).astype("uint8") # (B, 3, H, W) -> (B, H, W, 3) (channel re-order)
+        np_imgs = (final_rgb.permute(0, 2, 3, 1).cpu().numpy() * 255).astype(
+            "uint8"
+        )  # (B, 3, H, W) -> (B, H, W, 3) (channel re-order)
     return np_imgs
+
 
 def generate_feature_dataset(
     model: torch.nn.Module,
@@ -230,15 +244,17 @@ def generate_feature_dataset(
     )
     np.random.shuffle(combos)
 
-    dataset_name = f"{save_prefix}_feature_vis.npy" if save_prefix else "feature_vis.npy"
+    dataset_name = (
+        f"{save_prefix}_feature_vis.npy" if save_prefix else "feature_vis.npy"
+    )
     dataset_savepath = savepath / dataset_name
     dataset_savepath.parent.mkdir(parents=True, exist_ok=True)
 
     dataset_mmap = np.lib.format.open_memmap(
-    	dataset_savepath,
-    	dtype="uint8",
-    	mode="w+",
-    	shape=(num_imgs, img_size, img_size, 3)
+        dataset_savepath,
+        dtype="uint8",
+        mode="w+",
+        shape=(num_imgs, img_size, img_size, 3),
     )
 
     saved = 0

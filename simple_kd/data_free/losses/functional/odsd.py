@@ -22,7 +22,9 @@ def barlow_twins_loss(
         torch.Tensor: Scalar Barlow Twins loss.
     """
     in_basic = (basic_input - basic_input.mean(0)) / (basic_input.std(0) + 1e-6)
-    in_aug = (augmented_input - augmented_input.mean(0)) / (augmented_input.std(0) + 1e-6)
+    in_aug = (augmented_input - augmented_input.mean(0)) / (
+        augmented_input.std(0) + 1e-6
+    )
 
     c = torch.mm(in_basic.T, in_aug) / in_basic.size(0)
     on_diag = torch.diagonal(c).add_(-1).pow_(2).sum()
@@ -56,8 +58,12 @@ def spatial_mapping_loss(
     t_b, t_c = teacher_fp32.shape
     s_b, s_c = student_fp32.shape
 
-    teacher_minibatch = teacher_fp32 + torch.eye(t_b, m=t_c, device=teacher_fp32.device) * 1e-6
-    student_minibatch = student_fp32 + torch.eye(s_b, m=s_c, device=student_fp32.device) * 1e-6
+    teacher_minibatch = (
+        teacher_fp32 + torch.eye(t_b, m=t_c, device=teacher_fp32.device) * 1e-6
+    )
+    student_minibatch = (
+        student_fp32 + torch.eye(s_b, m=s_c, device=student_fp32.device) * 1e-6
+    )
 
     teacher_u, teacher_s, _ = torch.linalg.svd(teacher_minibatch, full_matrices=False)
     student_u, student_s, _ = torch.linalg.svd(student_minibatch, full_matrices=False)
@@ -108,18 +114,34 @@ def odsd_loss(
     # KD Loss
     log_pred_student = F.log_softmax(student_output / kd_temperature, dim=1)
     pred_teacher = F.softmax(teacher_output / kd_temperature, dim=1)
-    lkd_loss = F.kl_div(log_pred_student, pred_teacher, reduction="batchmean") * (kd_temperature**2) * kd_modifier
+    lkd_loss = (
+        F.kl_div(log_pred_student, pred_teacher, reduction="batchmean")
+        * (kd_temperature**2)
+        * kd_modifier
+    )
 
     # Spatial Mapping Loss
-    spatial_loss = spatial_mapping_loss(student_output=student_output,
-        teacher_output=teacher_output, huber_delta=huber_delta) * spatial_modifier
+    spatial_loss = (
+        spatial_mapping_loss(
+            student_output=student_output,
+            teacher_output=teacher_output,
+            huber_delta=huber_delta,
+        )
+        * spatial_modifier
+    )
 
     # 3. Contrastive Relational Loss (Barlow Twins)
     combined_features = torch.cat([student_output, teacher_output], dim=0)
-    combined_basic_features = torch.cat([student_basic_output, teacher_basic_output], dim=0)
+    combined_basic_features = torch.cat(
+        [student_basic_output, teacher_basic_output], dim=0
+    )
 
-    contrastive_loss1 = barlow_twins_loss(student_basic_output, student_output, loss_lambda=barlow_twins_lambda)
-    contrastive_loss2 = barlow_twins_loss(combined_basic_features, combined_features, loss_lambda=barlow_twins_lambda)
+    contrastive_loss1 = barlow_twins_loss(
+        student_basic_output, student_output, loss_lambda=barlow_twins_lambda
+    )
+    contrastive_loss2 = barlow_twins_loss(
+        combined_basic_features, combined_features, loss_lambda=barlow_twins_lambda
+    )
     relational_loss = (contrastive_loss1 + contrastive_loss2) * relational_modifier
 
     total_loss = lkd_loss + spatial_loss + relational_loss

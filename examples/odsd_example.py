@@ -31,23 +31,29 @@ SAMPLED_IMAGES_PATH = Path(TARGET_SAVE_LOCATION) / "sampled_images.npy"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
 
-GPU_HIGH_AUGS = v2.Compose([
-    v2.RandomCrop(32, padding=4),
-    v2.RandomHorizontalFlip(p=0.5),
-    v2.ToDtype(torch.float32, scale=True),
-    v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
-])
+GPU_HIGH_AUGS = v2.Compose(
+    [
+        v2.RandomCrop(32, padding=4),
+        v2.RandomHorizontalFlip(p=0.5),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
+    ]
+)
 
-GPU_LOW_AUGS = v2.Compose([
-    v2.ToDtype(torch.float32, scale=True),
-    v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
-])
+GPU_LOW_AUGS = v2.Compose(
+    [
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
+    ]
+)
 
-TEST_AUGS = v2.Compose([
-    v2.ToImage(),
-    v2.ToDtype(torch.float32, scale=True),
-    v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
-])
+TEST_AUGS = v2.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
+    ]
+)
 
 
 def seed_worker(worker_id):
@@ -68,13 +74,17 @@ if __name__ == "__main__":
     torch.manual_seed(42)
     np.random.seed(22)
     random.seed(42)
-    torch.backends.cudnn.benchmark = True # Enable for performance
+    torch.backends.cudnn.benchmark = True  # Enable for performance
     # torch.use_deterministic_algorithms(True, warn_only=True) # Comment for performance
-    torch.set_float32_matmul_precision("high") # From least to most performant: ["Highest", "High", "Medium"]
-    torch.backends.cuda.matmul.allow_tf32 = True # Disable if unsupported
-    torch.backends.cudnn.allow_tf32 = True # Disable if unsupported
+    torch.set_float32_matmul_precision(
+        "high"
+    )  # From least to most performant: ["Highest", "High", "Medium"]
+    torch.backends.cuda.matmul.allow_tf32 = True  # Disable if unsupported
+    torch.backends.cudnn.allow_tf32 = True  # Disable if unsupported
 
-    external_dataset = LabelFreeDataset(images_path=EXTERNAL_IMAGES_LOCATION, augmentations=CPU_AUGS, loading_mode="r+")
+    external_dataset = LabelFreeDataset(
+        images_path=EXTERNAL_IMAGES_LOCATION, augmentations=CPU_AUGS, loading_mode="r+"
+    )
 
     generator = torch.Generator()
     generator.manual_seed(58709)
@@ -111,28 +121,35 @@ if __name__ == "__main__":
 
     student_model = resnet18()
     student_model.conv1 = torch.nn.Conv2d(
-        in_channels=3,
-        out_channels=64,
-        kernel_size=5,
-        stride=1,
-        padding=2,
-        bias=False
+        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
     )
-    student_model.maxpool = torch.nn.Identity() # type: ignore
+    student_model.maxpool = torch.nn.Identity()  # type: ignore
     student_feats = student_model.fc.in_features
     student_model.fc = torch.nn.Linear(feats, CLASSES)
 
-    student_optimizer = torch.optim.SGD(student_model.parameters(), lr=1e-1, weight_decay=5e-4, momentum=0.9, nesterov=False, fused=True)
-    student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(student_optimizer, T_max=EPOCHS, eta_min=2e-3)
+    student_optimizer = torch.optim.SGD(
+        student_model.parameters(),
+        lr=1e-1,
+        weight_decay=5e-4,
+        momentum=0.9,
+        nesterov=False,
+        fused=True,
+    )
+    student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        student_optimizer, T_max=EPOCHS, eta_min=2e-3
+    )
 
-    student_model = student_model.to(memory_format=torch.channels_last) #type: ignore
-    teacher_model = teacher_model.to(memory_format=torch.channels_last) #type: ignore
+    student_model = student_model.to(memory_format=torch.channels_last)  # type: ignore
+    teacher_model = teacher_model.to(memory_format=torch.channels_last)  # type: ignore
 
-    student_model, teacher_model, student_optimizer, external_loader = accelerator.prepare(student_model, teacher_model, student_optimizer, external_loader)
+    student_model, teacher_model, student_optimizer, external_loader = (
+        accelerator.prepare(
+            student_model, teacher_model, student_optimizer, external_loader
+        )
+    )
 
-#     student_model = torch.compile(student_model)
-#     teacher_model = torch.compile(teacher_model)
-
+    #     student_model = torch.compile(student_model)
+    #     teacher_model = torch.compile(teacher_model)
 
     GPU_LOW_AUGS = GPU_LOW_AUGS.to(device)
     GPU_HIGH_AUGS = GPU_HIGH_AUGS.to(device)
@@ -144,11 +161,13 @@ if __name__ == "__main__":
             augmentations=GPU_LOW_AUGS,
             num_classes=CLASSES,
             save_location=Path(TARGET_SAVE_LOCATION),
-            save_plots=True
+            save_plots=True,
         )
 
     sampled_dataset_path = Path(TARGET_SAVE_LOCATION) / "sampled_dataset.npy"
-    sampled_dataset = LabelFreeDataset(images_path=str(sampled_dataset_path), augmentations=CPU_AUGS, loading_mode="r+")
+    sampled_dataset = LabelFreeDataset(
+        images_path=str(sampled_dataset_path), augmentations=CPU_AUGS, loading_mode="r+"
+    )
 
     generator.manual_seed(58709)
     sampled_loader = DataLoader(

@@ -14,7 +14,11 @@ class Dataset(torch.utils.data.Dataset):
         augmentations (torch.nn.Module | None, optional): On-fetch PyTorch data augmentations. Defaults to None.
     """
 
-    def __init__(self, images_path: str, labels_path: str, loading_mode: Literal["r+", "r", "w+", "c"] | None = "r",
+    def __init__(
+        self,
+        images_path: str,
+        labels_path: str,
+        loading_mode: Literal["r+", "r", "w+", "c"] | None = "r",
         augmentations: torch.nn.Module | None = None,
     ):
         super().__init__()
@@ -44,7 +48,11 @@ class InMemoryDataset(torch.utils.data.Dataset):
         augmentations (torch.nn.Module | None, optional): On-fetch PyTorch data augmentations. Defaults to None.
     """
 
-    def __init__(self, images: np.ndarray, labels: np.ndarray, augmentations: torch.nn.Module | None = None,
+    def __init__(
+        self,
+        images: np.ndarray,
+        labels: np.ndarray,
+        augmentations: torch.nn.Module | None = None,
     ):
         super().__init__()
         self.images = images
@@ -74,7 +82,10 @@ class LabelFreeDataset(torch.utils.data.Dataset):
         augmentations (torch.nn.Module | None, optional): On-fetch PyTorch data augmentations. Defaults to None.
     """
 
-    def __init__(self, images_path: str, loading_mode: Literal["r+", "r", "w+", "c"] | None = "r",
+    def __init__(
+        self,
+        images_path: str,
+        loading_mode: Literal["r+", "r", "w+", "c"] | None = "r",
         augmentations: torch.nn.Module | None = None,
     ):
         super().__init__()

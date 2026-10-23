@@ -8,8 +8,14 @@ import torch.nn.functional as F
 from sklearn.cluster import KMeans
 
 
-def plot_sampling_profile(p_i: torch.Tensor | np.ndarray, o_i: torch.Tensor | np.ndarray, d_c: torch.Tensor | np.ndarray,
-    sampling_score: torch.Tensor | np.ndarray, keep_ratio: float, savename: Path | None = None, n_bins: int = 100,
+def plot_sampling_profile(
+    p_i: torch.Tensor | np.ndarray,
+    o_i: torch.Tensor | np.ndarray,
+    d_c: torch.Tensor | np.ndarray,
+    sampling_score: torch.Tensor | np.ndarray,
+    keep_ratio: float,
+    savename: Path | None = None,
+    n_bins: int = 100,
 ) -> None:
     """Plots and saves the sample score profile and components for ODSD.
 
@@ -148,7 +154,7 @@ def odsd_sample(
     d_c = torch.zeros(total_samples, device="cpu")
 
     for i in range(num_classes):
-        class_mask = (all_preds == i)
+        class_mask = all_preds == i
         class_prototypes = all_outputs[class_mask]
         class_indices = class_mask.nonzero(as_tuple=True)[0]
 
@@ -157,15 +163,23 @@ def odsd_sample(
             kmeans = KMeans(n_clusters=n_clusters, n_init="auto", random_state=42)
             kmeans.fit(class_prototypes.numpy())
 
-            cluster_centers = torch.tensor(kmeans.cluster_centers_,dtype=class_prototypes.dtype,device=class_prototypes.device)
+            cluster_centers = torch.tensor(
+                kmeans.cluster_centers_,
+                dtype=class_prototypes.dtype,
+                device=class_prototypes.device,
+            )
 
             prototype_similarity = sum(
                 F.cosine_similarity(class_prototypes, center.unsqueeze(0))
                 for center in cluster_centers
             )
 
-            intra_class_outlier_mean = torch.sum(class_prototypes, dim=1) / class_prototypes.size(0)
-            density_score = torch.sqrt(intra_class_outlier_mean) / torch.log(torch.tensor(class_prototypes.size(0) + float(num_classes)))
+            intra_class_outlier_mean = torch.sum(
+                class_prototypes, dim=1
+            ) / class_prototypes.size(0)
+            density_score = torch.sqrt(intra_class_outlier_mean) / torch.log(
+                torch.tensor(class_prototypes.size(0) + float(num_classes))
+            )
 
             p_i[class_indices] = all_probs[class_indices, i]
             o_i[class_indices] = prototype_similarity
@@ -189,15 +203,23 @@ def odsd_sample(
     _, top_indices = torch.topk(sampling_score, num_to_keep, largest=is_largest)
     top_indices_np = top_indices.numpy()
 
-    subset_images = np.asarray(dataloader.dataset.images)[top_indices_np] # type: ignore
+    subset_images = np.asarray(dataloader.dataset.images)[top_indices_np]  # type: ignore
 
     elapsed = time.perf_counter() - start_time
-    print(f"ODSD sampling complete: kept {num_to_keep}/{total_samples} samples in {elapsed:.2f}s")
+    print(
+        f"ODSD sampling complete: kept {num_to_keep}/{total_samples} samples in {elapsed:.2f}s"
+    )
 
     if save_plots and save_location is not None:
-        dataset_prefix = f"{save_prefix}_sampled_dataset.npy" if save_prefix else "sampled_dataset.npy"
+        dataset_prefix = (
+            f"{save_prefix}_sampled_dataset.npy"
+            if save_prefix
+            else "sampled_dataset.npy"
+        )
         dataset_savepath = save_location / dataset_prefix
-        plot_prefix = f"{save_prefix}_sample_scores.png" if save_prefix else "sample_scores.png"
+        plot_prefix = (
+            f"{save_prefix}_sample_scores.png" if save_prefix else "sample_scores.png"
+        )
         plot_savepath = save_location / plot_prefix
         dataset_savepath.parent.mkdir(parents=True, exist_ok=True)
 

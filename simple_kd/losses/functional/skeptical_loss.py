@@ -2,13 +2,15 @@ import torch
 import torch.nn.functional as F
 
 
-def skeptical_loss(student_output: torch.Tensor,
-        teacher_output: torch.Tensor,
-        student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-        aux_classifier: torch.nn.Module,
-        T: float = 4.0,
-        kd_gamma: float = 0.5,
-        in_kd_gamma: float = 1.0) -> torch.Tensor:
+def skeptical_loss(
+    student_output: torch.Tensor,
+    teacher_output: torch.Tensor,
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    aux_classifier: torch.nn.Module,
+    T: float = 4.0,
+    kd_gamma: float = 0.5,
+    in_kd_gamma: float = 1.0,
+) -> torch.Tensor:
     """The skeptical loss function used for training from nasty students.
 
     The original paper can be found here https://openreview.net/pdf?id=Laz0L5tjml.
@@ -32,12 +34,12 @@ def skeptical_loss(student_output: torch.Tensor,
     log_soft_student = F.log_softmax(student_output / T, dim=1)
     soft_teacher = F.softmax(teacher_output / T, dim=1)
     kd_loss = F.kl_div(log_soft_student, soft_teacher, reduction="batchmean")
-    kd_loss = kd_loss * (T ** 2) * kd_gamma
+    kd_loss = kd_loss * (T**2) * kd_gamma
 
     pred_aux_student = aux_classifier(student_stages[0].detach())
     pred_aux_student = F.softmax(pred_aux_student / T, dim=1)
     in_lkd_loss = F.kl_div(log_soft_student, pred_aux_student, reduction="batchmean")
-    in_lkd_loss = in_lkd_loss * (T ** 2) * in_kd_gamma
+    in_lkd_loss = in_lkd_loss * (T**2) * in_kd_gamma
     aux_classifier.zero_grad(set_to_none=True)
 
     return in_lkd_loss + kd_loss

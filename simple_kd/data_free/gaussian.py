@@ -10,27 +10,29 @@ from simple_kd.training import evaluate_model
 from simple_kd.utils import SimpleGradClip
 
 
-def gaussian_train(accelerator: Accelerator,
-                student_model: torch.nn.Module,
-                teacher_model: torch.nn.Module,
-                augmentations: torch.nn.Module,
-                student_optimizer: torch.optim.Optimizer,
-                epochs: int,
-                batch_size: int,
-                synthetic_loader: torch.utils.data.DataLoader | None = None,
-                steps_per_epoch: int = 50,
-                noise_shape: tuple[int, int, int] = (3, 32, 32),
-                print_frequency: int = 10,
-                model_multipler: float = 1.0,
-                temperature: float = 4.0,
-                validation_frequency: int = 50,
-                scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-                clipper: SimpleGradClip | None = None,
-                validation_metrics: dict | None = None,
-                save_location: Path | None = None,
-                save_prefix: str = "",
-                save_student_model: bool = True,
-                save_history: bool = True) -> dict:
+def gaussian_train(
+    accelerator: Accelerator,
+    student_model: torch.nn.Module,
+    teacher_model: torch.nn.Module,
+    augmentations: torch.nn.Module,
+    student_optimizer: torch.optim.Optimizer,
+    epochs: int,
+    batch_size: int,
+    synthetic_loader: torch.utils.data.DataLoader | None = None,
+    steps_per_epoch: int = 50,
+    noise_shape: tuple[int, int, int] = (3, 32, 32),
+    print_frequency: int = 10,
+    model_multipler: float = 1.0,
+    temperature: float = 4.0,
+    validation_frequency: int = 50,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    clipper: SimpleGradClip | None = None,
+    validation_metrics: dict | None = None,
+    save_location: Path | None = None,
+    save_prefix: str = "",
+    save_student_model: bool = True,
+    save_history: bool = True,
+) -> dict:
     """This is a custom implementation of the method described from the paper Discovering and Overcoming Limitations of
     Noise-engineered Data-free Knowledge Distillation (Raikwar, Mishra). This method utilizes active batch norms to learn from gaussian noise.
 
@@ -71,7 +73,7 @@ def gaussian_train(accelerator: Accelerator,
     """
     criterion = KDLoss(T=temperature, gamma=model_multipler)
     history = {"student_loss": [], "student_lr": [], "epoch_time": []}
-    teacher_model.train() # While frozen, teacher needs to be on train mode to update batch statistics. Quirk unique to this method!
+    teacher_model.train()  # While frozen, teacher needs to be on train mode to update batch statistics. Quirk unique to this method!
     if synthetic_loader is None:
         z = torch.empty(
             (batch_size, noise_shape[0], noise_shape[1], noise_shape[2]),
@@ -80,7 +82,7 @@ def gaussian_train(accelerator: Accelerator,
             memory_format=torch.channels_last,
         )
     else:
-        z = torch.tensor(0.0) # Completely unused, this exists to calm the linters
+        z = torch.tensor(0.0)  # Completely unused, this exists to calm the linters
 
     for epoch in range(epochs):
         student_model.train()
@@ -133,8 +135,10 @@ def gaussian_train(accelerator: Accelerator,
                     student_optimizer.step()
                     student_optimizer.zero_grad(set_to_none=True)
 
-        epoch_samples = accelerator.reduce(train_total, reduction="sum").item() # type: ignore
-        model_epoch_loss = accelerator.reduce(total_train_loss, reduction="sum") / epoch_samples
+        epoch_samples = accelerator.reduce(train_total, reduction="sum").item()  # type: ignore
+        model_epoch_loss = (
+            accelerator.reduce(total_train_loss, reduction="sum") / epoch_samples
+        )
 
         if scheduler is not None:
             scheduler.step()
@@ -142,15 +146,16 @@ def gaussian_train(accelerator: Accelerator,
         if accelerator.is_main_process:
             epoch_time = time.perf_counter() - start_time
             history["student_loss"].append(model_epoch_loss.item())
-            history["student_lr"].append(student_optimizer.param_groups[0]['lr'])
+            history["student_lr"].append(student_optimizer.param_groups[0]["lr"])
             history["epoch_time"].append(epoch_time)
 
             if epoch % print_frequency == 0:
-                temp_message = f"Epoch {epoch+1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time:.2f}"
+                temp_message = f"Epoch {epoch + 1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time:.2f}"
                 print(temp_message)
 
             if epoch % validation_frequency == 0 and validation_metrics is not None:
-                _ = evaluate_model(model=student_model,
+                _ = evaluate_model(
+                    model=student_model,
                     images=validation_metrics["validation_images"],
                     labels=validation_metrics["validation_labels"],
                     batch_size=batch_size,
@@ -158,19 +163,28 @@ def gaussian_train(accelerator: Accelerator,
                     augs=validation_metrics["validation_augs"],
                     criterion=torch.nn.CrossEntropyLoss(),
                     classes=validation_metrics["classes"],
-                    save_folder=None)
+                    save_folder=None,
+                )
 
     accelerator.wait_for_everyone()
     if accelerator.is_main_process and save_location is not None:
         if save_student_model:
-            student_model_name = f"{save_prefix}_student_model.pth" if save_prefix else "student_model.pth"
+            student_model_name = (
+                f"{save_prefix}_student_model.pth"
+                if save_prefix
+                else "student_model.pth"
+            )
             student_model_savepath = save_location / student_model_name
             student_model_savepath.parent.mkdir(parents=True, exist_ok=True)
-            unwrapped_student_model = accelerator.unwrap_model(student_model, keep_torch_compile=False)
+            unwrapped_student_model = accelerator.unwrap_model(
+                student_model, keep_torch_compile=False
+            )
             torch.save(unwrapped_student_model.state_dict(), student_model_savepath)
 
         if save_history:
-            history_name = f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            history_name = (
+                f"{save_prefix}_history.csv" if save_prefix else "history.csv"
+            )
             history_savepath = save_location / history_name
             history_savepath.parent.mkdir(parents=True, exist_ok=True)
             data = {

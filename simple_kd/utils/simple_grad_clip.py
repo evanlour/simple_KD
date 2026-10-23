@@ -10,7 +10,13 @@ def _unitwise_norm(x, norm_type=2.0):
         return x.norm(norm_type, dim=tuple(range(1, x.ndim)), keepdim=True)
 
 
-def _adaptive_clip_grad(parameters, clip_factor: float = 0.01, eps: float = 1e-3, norm_type: float = 2.0, ignore_1D: bool = False):
+def _adaptive_clip_grad(
+    parameters,
+    clip_factor: float = 0.01,
+    eps: float = 1e-3,
+    norm_type: float = 2.0,
+    ignore_1D: bool = False,
+):
     """Implementation of AGC gradient clipping.
     This code is directly adapted from the timm repository
 
@@ -40,11 +46,16 @@ def _adaptive_clip_grad(parameters, clip_factor: float = 0.01, eps: float = 1e-3
 
         p_data = p.detach()
         g_data = p.grad.detach()
-        max_norm = _unitwise_norm(p_data, norm_type=norm_type).clamp_(min=eps).mul_(clip_factor)
+        max_norm = (
+            _unitwise_norm(p_data, norm_type=norm_type)
+            .clamp_(min=eps)
+            .mul_(clip_factor)
+        )
         grad_norm = _unitwise_norm(g_data, norm_type=norm_type)
         clipped_grad = g_data * (max_norm / grad_norm.clamp(min=1e-6))
         new_grads = torch.where(grad_norm < max_norm, g_data, clipped_grad)
         p.grad.detach().copy_(new_grads)
+
 
 class SimpleGradClip:
     """Wrapper class providing gradient clipping strategies (value, norm, and AGC).
@@ -69,29 +80,29 @@ class SimpleGradClip:
     Raises:
         ValueError: If an unsupported clip_type is specified.
     """
-    def __init__(self,
-                clip_type: str = "value",
-                clip_value: float = 2.0,
-                norm_type: float = 2.0,
-                clip_factor: float = 0.02,
-                eps: float = 1e-3,
-                error_if_nonfinite: bool = False,
-                foreach: bool = False,
-                ignore_1D: bool = False):
+
+    def __init__(
+        self,
+        clip_type: str = "value",
+        clip_value: float = 2.0,
+        norm_type: float = 2.0,
+        clip_factor: float = 0.02,
+        eps: float = 1e-3,
+        error_if_nonfinite: bool = False,
+        foreach: bool = False,
+        ignore_1D: bool = False,
+    ):
         super().__init__()
         if clip_type == "value":
             self.inner_fn = torch.nn.utils.clip_grad_value_
-            self.gradient_params = {
-                "clip_value": clip_value,
-                "foreach": foreach
-            }
+            self.gradient_params = {"clip_value": clip_value, "foreach": foreach}
         elif clip_type == "norm":
             self.inner_fn = torch.nn.utils.clip_grad_norm_
             self.gradient_params = {
                 "max_norm": clip_value,
                 "norm_type": norm_type,
                 "foreach": foreach,
-                "error_if_nonfinite": error_if_nonfinite
+                "error_if_nonfinite": error_if_nonfinite,
             }
         elif clip_type == "agc":
             self.inner_fn = _adaptive_clip_grad
@@ -99,10 +110,12 @@ class SimpleGradClip:
                 "clip_factor": clip_factor,
                 "norm_type": norm_type,
                 "eps": eps,
-                "ignore_1D": ignore_1D
+                "ignore_1D": ignore_1D,
             }
         else:
-            raise ValueError(f"Invalid clip_type: '{clip_type}'. Supported: 'value', 'norm', 'agc'.")
+            raise ValueError(
+                f"Invalid clip_type: '{clip_type}'. Supported: 'value', 'norm', 'agc'."
+            )
 
     def __call__(self, parameters) -> torch.Tensor | None:
         """Applies gradient clipping in-place to the given parameters.

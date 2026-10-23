@@ -17,12 +17,15 @@ class DFADLoss(torch.nn.Module):
         sign (float, optional): The sign and multiplier of the result (+1.0 for student, -1.0 for generator). Defaults to 1.0.
         use_log1p (bool, optional): Whether to apply log1p to the L1 loss (ADA protocol). Defaults to False.
     """
-    def __init__(self, sign: float=1.0, use_log1p:bool=False):
+
+    def __init__(self, sign: float = 1.0, use_log1p: bool = False):
         super().__init__()
         self.sign = sign
         self.use_log1p = use_log1p
 
-    def forward(self, student_output: torch.Tensor, teacher_output: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, student_output: torch.Tensor, teacher_output: torch.Tensor
+    ) -> torch.Tensor:
         """Computes the signed DFAD loss.
 
         Args:
@@ -33,6 +36,10 @@ class DFADLoss(torch.nn.Module):
             torch.Tensor: Scalar discrepancy loss scaled by sign.
         """
         if self.use_log1p:
-            return self.sign * torch.log1p(dfad_loss(student_output=student_output, teacher_output=teacher_output))
+            return self.sign * torch.log1p(
+                dfad_loss(student_output=student_output, teacher_output=teacher_output)
+            )
         else:
-            return self.sign * dfad_loss(student_output=student_output, teacher_output=teacher_output)
+            return self.sign * dfad_loss(
+                student_output=student_output, teacher_output=teacher_output
+            )

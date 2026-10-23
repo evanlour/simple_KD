@@ -6,15 +6,18 @@ def _attention_map(stage, power):
     """Helper function in order to find the attention map of the stage"""
     am = torch.pow(torch.abs(stage), power)
     am = torch.sum(am, dim=1, keepdim=True)
-    norm = torch.norm(am, dim=(-2,-1), keepdim=True)
+    norm = torch.norm(am, dim=(-2, -1), keepdim=True)
     am = torch.div(am, norm + 1e-6)
     return am
 
-def at_loss(student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-           teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-           stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
-           power: float = 2.0,
-           gamma: float = 64.0) -> torch.Tensor:
+
+def at_loss(
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
+    stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
+    power: float = 2.0,
+    gamma: float = 64.0,
+) -> torch.Tensor:
     """Code implementation of the Attention Transfer(AT) method.
 
     The original paper (PAYING MORE ATTENTION TO ATTENTION: IMPROVING THE PERFORMANCE OF CONVOLUTIONAL
@@ -36,10 +39,16 @@ def at_loss(student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     """
 
     loss = 0
-    for teacher_stage, student_stage, stage_percentage in zip(teacher_stages, student_stages, stage_percentages):
+    for teacher_stage, student_stage, stage_percentage in zip(
+        teacher_stages, student_stages, stage_percentages
+    ):
         teacher_flat = _attention_map(teacher_stage, power)
         student_flat = _attention_map(student_stage, power)
         if teacher_flat.shape[2:] != student_flat.shape[2:]:
-            student_flat = F.interpolate(student_flat, size=teacher_flat.shape[2:], mode='bilinear')
-        loss += F.mse_loss(student_flat, teacher_flat, reduction="mean") * stage_percentage
-    return loss * gamma # type: ignore
+            student_flat = F.interpolate(
+                student_flat, size=teacher_flat.shape[2:], mode="bilinear"
+            )
+        loss += (
+            F.mse_loss(student_flat, teacher_flat, reduction="mean") * stage_percentage
+        )
+    return loss * gamma  # type: ignore

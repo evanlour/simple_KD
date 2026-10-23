@@ -41,9 +41,7 @@ def inspect_dataset(
     print(f"File:        {path.name}")
     print(f"Shape:       {data.shape} ({data.dtype})")
     print(f"Intensity:   Min={p_min}, Max={p_max}, Mean={p_mean:.2f}")
-    print(
-        f"Unique:      {unique_count} / {total} (Duplicates: {total - unique_count})"
-    )
+    print(f"Unique:      {unique_count} / {total} (Duplicates: {total - unique_count})")
 
     if p_min == p_max:
         print("[WARNING] All pixels are identical across the dataset.")

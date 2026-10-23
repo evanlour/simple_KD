@@ -19,12 +19,12 @@ def _filter_kwargs_for_callable(fn, kwargs: dict) -> dict:
     target = getattr(fn, "forward", fn)
     sig = inspect.signature(target)
     valid_names = set(sig.parameters.keys())
-    return {
-        k: v for k, v in kwargs.items()
-        if k in valid_names and v is not None
-    }
+    return {k: v for k, v in kwargs.items() if k in valid_names and v is not None}
 
-def compute_generator_metrics(images: torch.Tensor, teacher_logits: torch.Tensor) -> dict:
+
+def compute_generator_metrics(
+    images: torch.Tensor, teacher_logits: torch.Tensor
+) -> dict:
     """Computes quality, diversity, and spread metrics directly from step tensors.
 
     Args:
@@ -43,7 +43,9 @@ def compute_generator_metrics(images: torch.Tensor, teacher_logits: torch.Tensor
     with torch.no_grad():
         probs = torch.softmax(teacher_logits, dim=-1)
 
-        conf = probs.max(dim=-1).values.mean().item() # Quality / Semantic Fidelity (Ideal: > 0.70)
+        conf = (
+            probs.max(dim=-1).values.mean().item()
+        )  # Quality / Semantic Fidelity (Ideal: > 0.70)
 
         # Batch-level Class Diversity (Ideal: > 0.70 - 0.90)
         mean_dist = probs.mean(dim=0)
@@ -51,7 +53,9 @@ def compute_generator_metrics(images: torch.Tensor, teacher_logits: torch.Tensor
         entropy = -(mean_dist * torch.log(mean_dist + 1e-8)).sum().item()
         norm_entropy = entropy / torch.log(torch.tensor(float(num_classes))).item()
 
-        pixel_spread = images.std(dim=0).mean().item() # Spatial/Pixel Diversity (Rules out flat gray/checkerboard collapse; Ideal: > 0.15)
+        pixel_spread = (
+            images.std(dim=0).mean().item()
+        )  # Spatial/Pixel Diversity (Rules out flat gray/checkerboard collapse; Ideal: > 0.15)
 
     return {
         "gen_conf": conf,
@@ -59,12 +63,15 @@ def compute_generator_metrics(images: torch.Tensor, teacher_logits: torch.Tensor
         "gen_spread": pixel_spread,
     }
 
-def images_from_generator(generator: torch.nn.Module,
-                          augmentations: torch.nn.Module,
-                          device: torch.device,
-                          batch_size: int,
-                          generator_latent_size: int,
-                          requires_grad: bool=False) -> torch.Tensor:
+
+def images_from_generator(
+    generator: torch.nn.Module,
+    augmentations: torch.nn.Module,
+    device: torch.device,
+    batch_size: int,
+    generator_latent_size: int,
+    requires_grad: bool = False,
+) -> torch.Tensor:
     """Generates a batch of synthetic images from random Gaussian latent vectors.
 
     Args:
@@ -93,16 +100,19 @@ def images_from_generator(generator: torch.nn.Module,
             gen_imgs = augmentations(gen_imgs)
     return gen_imgs
 
-def train_model_with_generator(accelerator: Accelerator,
-                                images: torch.Tensor,
-                                student_model: torch.nn.Module,
-                                teacher_model: torch.nn.Module,
-                                generator: torch.nn.Module,
-                                criterion: torch.nn.Module,
-                                student_optimizer: torch.optim.Optimizer,
-                                student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-                                teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-                                clipper: SimpleGradClip | None = None,) -> tuple[torch.Tensor, dict]:
+
+def train_model_with_generator(
+    accelerator: Accelerator,
+    images: torch.Tensor,
+    student_model: torch.nn.Module,
+    teacher_model: torch.nn.Module,
+    generator: torch.nn.Module,
+    criterion: torch.nn.Module,
+    student_optimizer: torch.optim.Optimizer,
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    clipper: SimpleGradClip | None = None,
+) -> tuple[torch.Tensor, dict]:
     """Executes a single optimization step for the student model using generator images.
 
     Evaluates the student on synthetic images, gathers teacher outputs under no_grad,
@@ -135,9 +145,13 @@ def train_model_with_generator(accelerator: Accelerator,
             generator_statistics = compute_generator_metrics(images, teacher_output)
         available_args = {
             "student_output": student_output,
-            "teacher_output": teacher_output.detach() if teacher_output is not None else None,
+            "teacher_output": teacher_output.detach()
+            if teacher_output is not None
+            else None,
             "student_stages": student_stages,
-            "teacher_stages": [v.detach() for v in teacher_stages] if teacher_stages is not None else None,
+            "teacher_stages": [v.detach() for v in teacher_stages]
+            if teacher_stages is not None
+            else None,
         }
         filtered_args = _filter_kwargs_for_callable(criterion, available_args)
         train_loss = criterion(**filtered_args)
@@ -151,16 +165,18 @@ def train_model_with_generator(accelerator: Accelerator,
     return train_loss, generator_statistics
 
 
-def train_generator(accelerator: Accelerator,
-                                images: torch.Tensor,
-                                student_model: torch.nn.Module,
-                                teacher_model: torch.nn.Module,
-                                generator: torch.nn.Module,
-                                criterion: torch.nn.Module,
-                                generator_optimizer: torch.optim.Optimizer,
-                                student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-                                teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-                                clipper: SimpleGradClip | None = None,) -> torch.Tensor:
+def train_generator(
+    accelerator: Accelerator,
+    images: torch.Tensor,
+    student_model: torch.nn.Module,
+    teacher_model: torch.nn.Module,
+    generator: torch.nn.Module,
+    criterion: torch.nn.Module,
+    generator_optimizer: torch.optim.Optimizer,
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    clipper: SimpleGradClip | None = None,
+) -> torch.Tensor:
     """Executes a single optimization step for the generator.
 
     Feeds synthetic images through student and teacher models, calculates the adversarial
@@ -190,9 +206,13 @@ def train_generator(accelerator: Accelerator,
             teacher_output = teacher_model(images)
         available_args = {
             "student_output": student_output,
-            "teacher_output": teacher_output.detach() if teacher_output is not None else None,
+            "teacher_output": teacher_output.detach()
+            if teacher_output is not None
+            else None,
             "student_stages": student_stages,
-            "teacher_stages": [v.detach() for v in teacher_stages] if teacher_stages is not None else None,
+            "teacher_stages": [v.detach() for v in teacher_stages]
+            if teacher_stages is not None
+            else None,
         }
         filtered_args = _filter_kwargs_for_callable(criterion, available_args)
         train_loss = criterion(**filtered_args)

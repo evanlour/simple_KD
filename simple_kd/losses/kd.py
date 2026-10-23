@@ -14,12 +14,15 @@ class KDLoss(torch.nn.Module):
         T (float, optional): The distillation temperature. Defaults to 4.0.
         gamma (float, optional): Multiplier/weight for the distillation loss. Defaults to 1.0.
     """
+
     def __init__(self, T: float = 4.0, gamma: float = 1.0):
         super().__init__()
         self.T = T
         self.gamma = gamma
 
-    def forward(self, student_output: torch.Tensor, teacher_output: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, student_output: torch.Tensor, teacher_output: torch.Tensor
+    ) -> torch.Tensor:
         """Computes the KD loss between student and teacher logits.
 
         Args:
@@ -29,4 +32,9 @@ class KDLoss(torch.nn.Module):
         Returns:
             torch.Tensor: The distillation loss.
         """
-        return kd_loss(student_output=student_output, teacher_output=teacher_output, T=self.T, gamma=self.gamma)
+        return kd_loss(
+            student_output=student_output,
+            teacher_output=teacher_output,
+            T=self.T,
+            gamma=self.gamma,
+        )

@@ -9,7 +9,9 @@ import torch
 import torch.nn.functional as F
 
 
-def colorPCA(ref_image: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def colorPCA(
+    ref_image: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Computes spatial color Principal Component Analysis (PCA) to decorrelate color channels.
 
     Args:
@@ -30,7 +32,10 @@ def colorPCA(ref_image: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch
     decor = torch.bmm(colorPC.transpose(1, 2), centered)
     return decor.view(B, C, H, W), colorPC, meanColor.view(B, C, 1, 1)
 
-def inv_colorPCA(decor_image: torch.Tensor, colorPC: torch.Tensor, meanColor: torch.Tensor) -> torch.Tensor:
+
+def inv_colorPCA(
+    decor_image: torch.Tensor, colorPC: torch.Tensor, meanColor: torch.Tensor
+) -> torch.Tensor:
     """Inverts PCA color transformation to restore correlated color channels.
 
     Args:
@@ -45,7 +50,10 @@ def inv_colorPCA(decor_image: torch.Tensor, colorPC: torch.Tensor, meanColor: to
     rec = torch.bmm(colorPC, decor_image.view(B, C, -1))
     return rec.view(B, C, H, W) + meanColor
 
-def sample_colormodel(B: int, resolution: int, device: torch.device) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+def sample_colormodel(
+    B: int, resolution: int, device: torch.device
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Samples a smooth low-frequency color model and returns its PCA basis.
 
     Args:
@@ -60,12 +68,20 @@ def sample_colormodel(B: int, resolution: int, device: torch.device) -> tuple[to
             - meanColor (torch.Tensor): Mean color vector of shape (B, 3, 1, 1).
     """
     coarse_res = torch.randint(3, 8, (1,)).item()
-    coarse_colors = torch.rand(B, 3, coarse_res, coarse_res, device=device) # type: ignore
-    ref = F.interpolate(coarse_colors, size=(resolution, resolution), mode='bilinear', align_corners=False)
+    coarse_colors = torch.rand(B, 3, coarse_res, coarse_res, device=device)  # type: ignore
+    ref = F.interpolate(
+        coarse_colors,
+        size=(resolution, resolution),
+        mode="bilinear",
+        align_corners=False,
+    )
     ref = F.avg_pool2d(ref, kernel_size=5, stride=1, padding=2)
     return colorPCA(ref)
 
-def match_cumulative_cdf(source: torch.Tensor, target_reference: torch.Tensor) -> torch.Tensor:
+
+def match_cumulative_cdf(
+    source: torch.Tensor, target_reference: torch.Tensor
+) -> torch.Tensor:
     """Modifies source tensor so that its empirical CDF matches target reference CDF.
 
     Performs exact 1D histogram matching via sorted inverse-transform sampling along
@@ -101,6 +117,7 @@ def match_cumulative_cdf(source: torch.Tensor, target_reference: torch.Tensor) -
     matched.scatter_(-1, src_indices, interpolated)
     return matched.view(B, C, H, W)
 
+
 def sample_1f_spectrum(
     B: int,
     resolution: int,
@@ -133,7 +150,10 @@ def sample_1f_spectrum(
     magnitude[:, :, 0, 0] = 0.0
     return magnitude
 
-def impose_spectrum(x: torch.Tensor, target_magnitude: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+
+def impose_spectrum(
+    x: torch.Tensor, target_magnitude: torch.Tensor, eps: float = 1e-8
+) -> torch.Tensor:
     """Replaces Fourier magnitude spectrum of an image while preserving its phase.
 
     Args:
@@ -157,7 +177,10 @@ def impose_spectrum(x: torch.Tensor, target_magnitude: torch.Tensor, eps: float 
     out_std = out.std(dim=(-2, -1), keepdim=True) + eps
     return (out - out_mean) / out_std * std + mean
 
-def impose_wmm(x: torch.Tensor, filters: torch.Tensor, target_subbands: torch.Tensor) -> torch.Tensor:
+
+def impose_wmm(
+    x: torch.Tensor, filters: torch.Tensor, target_subbands: torch.Tensor
+) -> torch.Tensor:
     """Imposes Wavelet Marginal Matching (WMM) using a steerable pyramid filter bank.
 
     Filters the image into oriented multiscale subbands, matches each subband's empirical
@@ -179,7 +202,9 @@ def impose_wmm(x: torch.Tensor, filters: torch.Tensor, target_subbands: torch.Te
     coeffs = torch.fft.ifft2(fft_x * filt).real
 
     coeffs_reshaped = coeffs.permute(0, 2, 1, 3, 4).reshape(B * F_num, C, H, W)
-    targets_expanded = target_subbands.unsqueeze(2).expand(B, F_num, C, -1).reshape(B * F_num, C, -1)
+    targets_expanded = (
+        target_subbands.unsqueeze(2).expand(B, F_num, C, -1).reshape(B * F_num, C, -1)
+    )
 
     matched = match_cumulative_cdf(coeffs_reshaped, targets_expanded)
     matched_coeffs = matched.view(B, F_num, C, H, W).permute(0, 2, 1, 3, 4)
@@ -190,7 +215,10 @@ def impose_wmm(x: torch.Tensor, filters: torch.Tensor, target_subbands: torch.Te
     fft_matched = torch.fft.fft2(matched_coeffs)
     return torch.sum(torch.fft.ifft2(fft_matched * filt).real, dim=2)
 
-def sample_wmm_model(B: int, num_filters: int, resolution: int, device: torch.device) -> torch.Tensor:
+
+def sample_wmm_model(
+    B: int, num_filters: int, resolution: int, device: torch.device
+) -> torch.Tensor:
     """Samples Generalized Gaussian Distribution (GGD) marginal targets for wavelet subbands.
 
     Uses Gamma variate transformation to sample heavy-tailed distributions characteristic
@@ -211,10 +239,13 @@ def sample_wmm_model(B: int, num_filters: int, resolution: int, device: torch.de
 
     # Exact Generalized Gaussian sampling via Gamma variates
     alpha = 1.0 / r
-    gamma_dist = torch.distributions.Gamma(concentration=alpha, rate=torch.ones_like(alpha))
-    g = gamma_dist.sample((N,)).squeeze(-1).permute(1, 2, 0) # (B, F, N)
+    gamma_dist = torch.distributions.Gamma(
+        concentration=alpha, rate=torch.ones_like(alpha)
+    )
+    g = gamma_dist.sample((N,)).squeeze(-1).permute(1, 2, 0)  # (B, F, N)
     sign = torch.where(torch.rand(B, num_filters, N, device=device) < 0.5, -1.0, 1.0)
     return sign * s * (g ** (1.0 / r))
+
 
 def build_steerable_filters(
     device: torch.device,
@@ -239,30 +270,39 @@ def build_steerable_filters(
     H = W = resolution
     fy = torch.fft.fftfreq(H, device=device).view(H, 1)
     fx = torch.fft.fftfreq(W, device=device).view(1, W)
-    r = torch.sqrt(fx ** 2 + fy ** 2)
+    r = torch.sqrt(fx**2 + fy**2)
     theta = torch.atan2(fy, fx)
 
     filters = []
     angles = [k * torch.pi / num_orientations for k in range(num_orientations)]
     log_r = torch.log2(r.clamp(min=1e-5) / 0.5)
 
-    hp_mask = (log_r >= 0).float() + (log_r > -1.0).float() * (log_r < 0).float() * torch.cos(torch.pi * log_r / 2) ** 2
+    hp_mask = (log_r >= 0).float() + (log_r > -1.0).float() * (
+        log_r < 0
+    ).float() * torch.cos(torch.pi * log_r / 2) ** 2
     filters.append(torch.sqrt(hp_mask.clamp(0, 1)))
 
     for s in range(num_scales):
         center = -(s + 1)
         rad_band = torch.cos(torch.pi * (log_r - center).clamp(-1.0, 1.0) / 2) ** 2
         for theta_k in angles:
-            ang_diff = torch.remainder(theta - theta_k + torch.pi / 2, torch.pi) - torch.pi / 2
-            ang_band = (torch.cos(ang_diff) ** (num_orientations - 1)) * (torch.abs(ang_diff) < torch.pi / 2).float()
+            ang_diff = (
+                torch.remainder(theta - theta_k + torch.pi / 2, torch.pi) - torch.pi / 2
+            )
+            ang_band = (torch.cos(ang_diff) ** (num_orientations - 1)) * (
+                torch.abs(ang_diff) < torch.pi / 2
+            ).float()
             filters.append(torch.sqrt(rad_band * ang_band))
 
-    lp_mask = (log_r <= -num_scales).float() + (log_r > -num_scales) * (log_r < -num_scales + 1) * torch.cos(torch.pi * (log_r + num_scales - 1) / 2) ** 2
+    lp_mask = (log_r <= -num_scales).float() + (log_r > -num_scales) * (
+        log_r < -num_scales + 1
+    ) * torch.cos(torch.pi * (log_r + num_scales - 1) / 2) ** 2
     filters.append(torch.sqrt(lp_mask.clamp(0, 1)))
 
     stack = torch.stack(filters, dim=0)
-    norm = torch.sqrt(torch.sum(stack ** 2, dim=0, keepdim=True).clamp(min=1e-12))
+    norm = torch.sqrt(torch.sum(stack**2, dim=0, keepdim=True).clamp(min=1e-12))
     return stack / norm
+
 
 def generate_statistical_sample(
     B: int,
@@ -308,22 +348,25 @@ def generate_statistical_sample(
     if impose_spectrum_flag:
         target_mag = sample_1f_spectrum(B, resolution, device=device)
     if impose_wmm_flag:
-        target_subbands = sample_wmm_model(B, filters.shape[0], resolution, device=device) # type: ignore
+        target_subbands = sample_wmm_model(
+            B, filters.shape[0], resolution, device=device
+        )  # type: ignore
 
     for _ in range(n_iter):
         if impose_spectrum_flag:
-            x = impose_spectrum(x, target_mag) # type: ignore
+            x = impose_spectrum(x, target_mag)  # type: ignore
         if impose_wmm_flag:
-            x = impose_wmm(x, filters, target_subbands) # type: ignore
+            x = impose_wmm(x, filters, target_subbands)  # type: ignore
         if impose_color_flag:
-            x = match_cumulative_cdf(x, ref_decor) # type: ignore
+            x = match_cumulative_cdf(x, ref_decor)  # type: ignore
 
     if correlate_channels:
-        x = inv_colorPCA(x, colorPC, meanColor) # type: ignore
+        x = inv_colorPCA(x, colorPC, meanColor)  # type: ignore
 
     x_min = x.amin(dim=(-3, -2, -1), keepdim=True)
     x_max = x.amax(dim=(-3, -2, -1), keepdim=True)
     return ((x - x_min) / (x_max - x_min + 1e-8) * 255.0).clamp(0, 255).to(torch.uint8)
+
 
 def generate_statistical_dataset(
     device: torch.device,
@@ -360,7 +403,9 @@ def generate_statistical_dataset(
         None
     """
 
-    dataset_name = f"{save_prefix}_statistical.npy" if save_prefix else "statistical.npy"
+    dataset_name = (
+        f"{save_prefix}_statistical.npy" if save_prefix else "statistical.npy"
+    )
     dataset_savepath = savepath / dataset_name
     dataset_savepath.parent.mkdir(parents=True, exist_ok=True)
 
@@ -368,9 +413,9 @@ def generate_statistical_dataset(
 
     mmap = np.lib.format.open_memmap(
         dataset_savepath,
-        mode='w+',
+        mode="w+",
         dtype=np.uint8,
-        shape=(total_samples, resolution, resolution, 3)
+        shape=(total_samples, resolution, resolution, 3),
     )
 
     written = 0
@@ -386,9 +431,11 @@ def generate_statistical_dataset(
                 impose_color_flag=impose_color_flag,
                 impose_spectrum_flag=impose_spectrum_flag,
                 impose_wmm_flag=impose_wmm_flag,
-                correlate_channels=correlate_channels
+                correlate_channels=correlate_channels,
             )
-        mmap[written:written + current_batch] = batch.permute(0, 2, 3, 1).cpu().numpy()
+        mmap[written : written + current_batch] = (
+            batch.permute(0, 2, 3, 1).cpu().numpy()
+        )
         written += current_batch
         print(f"Currently {written} written out of a total of {total_samples}")
     mmap.flush()

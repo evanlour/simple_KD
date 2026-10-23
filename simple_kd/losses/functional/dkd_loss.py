@@ -8,12 +8,15 @@ def _cat_mask(t, mask1, mask2):
     rt = torch.cat([t1, t2], dim=1)
     return rt
 
-def dkd_loss(student_output: torch.Tensor,
-        teacher_output: torch.Tensor,
-        labels: torch.Tensor,
-        T: float = 4.0,
-        tckd_gamma: float = 1.0,
-        nckd_gamma: float = 8.0) -> torch.Tensor:
+
+def dkd_loss(
+    student_output: torch.Tensor,
+    teacher_output: torch.Tensor,
+    labels: torch.Tensor,
+    T: float = 4.0,
+    tckd_gamma: float = 1.0,
+    nckd_gamma: float = 8.0,
+) -> torch.Tensor:
     """Code implementation of the Decoupled Knowledge Distillation (DKD) method.
 
     The original paper Decoupled Knowledge Distillation can be found at https://arxiv.org/pdf/2203.08679.
@@ -32,8 +35,12 @@ def dkd_loss(student_output: torch.Tensor,
         torch.Tensor: The distillation loss.
     """
 
-    gt_mask = torch.zeros_like(student_output).scatter_(1, labels.reshape(-1, 1), 1).bool()
-    ngt_mask = torch.ones_like(student_output).scatter_(1, labels.reshape(-1, 1), 0).bool()
+    gt_mask = (
+        torch.zeros_like(student_output).scatter_(1, labels.reshape(-1, 1), 1).bool()
+    )
+    ngt_mask = (
+        torch.ones_like(student_output).scatter_(1, labels.reshape(-1, 1), 0).bool()
+    )
 
     soft_teacher = F.softmax(teacher_output / T, dim=1)
     soft_student = F.softmax(student_output / T, dim=1)
@@ -44,7 +51,7 @@ def dkd_loss(student_output: torch.Tensor,
     nckd_teacher = F.softmax((teacher_output / T) - 1000 * gt_mask, dim=1)
     nckd_student = F.log_softmax((student_output / T) - 1000 * gt_mask, dim=1)
 
-    tckd_loss = F.kl_div(log_soft_student, soft_teacher, reduction="batchmean") * (T ** 2)
-    nckd_loss = F.kl_div(nckd_student, nckd_teacher, reduction="batchmean") * (T ** 2)
+    tckd_loss = F.kl_div(log_soft_student, soft_teacher, reduction="batchmean") * (T**2)
+    nckd_loss = F.kl_div(nckd_student, nckd_teacher, reduction="batchmean") * (T**2)
 
     return tckd_gamma * tckd_loss + nckd_gamma * nckd_loss

@@ -18,13 +18,21 @@ class DKDLoss(torch.nn.Module):
         tckd_gamma (float, optional): Multiplier for Target Class Knowledge Distillation. Defaults to 1.0.
         nckd_gamma (float, optional): Multiplier for Non-target Class Knowledge Distillation. Defaults to 8.0.
     """
-    def __init__(self, T: float = 4.0, tckd_gamma: float = 1.0, nckd_gamma: float = 8.0):
+
+    def __init__(
+        self, T: float = 4.0, tckd_gamma: float = 1.0, nckd_gamma: float = 8.0
+    ):
         super().__init__()
         self.T = T
         self.tckd_gamma = tckd_gamma
         self.nckd_gamma = nckd_gamma
 
-    def forward(self, student_output: torch.Tensor, teacher_output: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        student_output: torch.Tensor,
+        teacher_output: torch.Tensor,
+        labels: torch.Tensor,
+    ) -> torch.Tensor:
         """Computes the DKD loss.
 
         Args:
@@ -35,4 +43,11 @@ class DKDLoss(torch.nn.Module):
         Returns:
             torch.Tensor: The decoupled distillation loss.
         """
-        return dkd_loss(student_output=student_output, teacher_output=teacher_output, labels=labels, T=self.T, tckd_gamma=self.tckd_gamma, nckd_gamma=self.nckd_gamma)
+        return dkd_loss(
+            student_output=student_output,
+            teacher_output=teacher_output,
+            labels=labels,
+            T=self.T,
+            tckd_gamma=self.tckd_gamma,
+            nckd_gamma=self.nckd_gamma,
+        )
