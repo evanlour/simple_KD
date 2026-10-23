@@ -146,7 +146,7 @@ def gaussian_train(accelerator: Accelerator,
             history["epoch_time"].append(epoch_time)
 
             if epoch % print_frequency == 0:
-                temp_message = f"Epoch {epoch+1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time}"
+                temp_message = f"Epoch {epoch+1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time:.2f}"
                 print(temp_message)
 
             if epoch % validation_frequency == 0 and validation_metrics is not None:

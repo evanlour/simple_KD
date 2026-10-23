@@ -197,7 +197,7 @@ def dafl_train(accelerator: Accelerator,
             if epoch % print_frequency == 0:
                 temp_message = f"Epoch {epoch+1}/{epochs} Student Train Loss: {model_epoch_loss:.4f}, Student lr: {student_optimizer.param_groups[0]['lr']:.6f},"
                 temp_message += f" Generator confidence: {gen_conf:.4f}, Generator Entropy: {gen_entropy:.4f}, Generator spread: {gen_spread:.4f},"
-                temp_message += f" Generator Train Loss: {gen_epoch_loss:.4f}, Generator lr: {generator_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time}"
+                temp_message += f" Generator Train Loss: {gen_epoch_loss:.4f}, Generator lr: {generator_optimizer.param_groups[0]['lr']:.6f}, Training time: {epoch_time:.2f}"
                 print(temp_message)
 
             if epoch % validation_frequency == 0 and validation_metrics is not None:
