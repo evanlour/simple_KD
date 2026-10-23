@@ -72,7 +72,6 @@ def evaluate_model(
         batch_size=batch_size,
         shuffle=False,
         pin_memory=True,
-        pin_memory_device=str(device),
     )
 
     model.eval()
@@ -108,23 +107,23 @@ def evaluate_model(
     test_accuracy = 100.0 * test_correct / test_total
 
     precision = float(
-        precision_score(all_labels, all_preds, average="weighted", zero_division=0)
-    )  # type: ignore
+        precision_score(all_labels, all_preds, average="weighted", zero_division=0)  # type: ignore
+    )
     recall = float(
-        recall_score(all_labels, all_preds, average="weighted", zero_division=0)
-    )  # type: ignore
+        recall_score(all_labels, all_preds, average="weighted", zero_division=0)  # type: ignore
+    )
     f1_test_score = float(
-        f1_score(all_labels, all_preds, average="weighted", zero_division=0)
-    )  # type: ignore
+        f1_score(all_labels, all_preds, average="weighted", zero_division=0)  # type: ignore
+    )
     precision_macro = float(
-        precision_score(all_labels, all_preds, average="macro", zero_division=0)
-    )  # type: ignore
+        precision_score(all_labels, all_preds, average="macro", zero_division=0)  # type: ignore
+    )
     recall_macro = float(
-        recall_score(all_labels, all_preds, average="macro", zero_division=0)
-    )  # type: ignore
+        recall_score(all_labels, all_preds, average="macro", zero_division=0)  # type: ignore
+    )
     f1_test_score_macro = float(
-        f1_score(all_labels, all_preds, average="macro", zero_division=0)
-    )  # type: ignore
+        f1_score(all_labels, all_preds, average="macro", zero_division=0)  # type: ignore
+    )
 
     metrics = {
         "test_loss": test_loss,

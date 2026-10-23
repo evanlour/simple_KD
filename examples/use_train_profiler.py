@@ -97,7 +97,6 @@ if __name__ == "__main__":
         shuffle=True,
         num_workers=2,
         pin_memory=True,
-        pin_memory_device=device.type,
         prefetch_factor=2,
         generator=generator,
         persistent_workers=True,
