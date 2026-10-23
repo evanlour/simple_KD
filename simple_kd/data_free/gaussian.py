@@ -5,10 +5,10 @@ from pathlib import Path
 import torch
 from accelerate import Accelerator
 
+from simple_kd.losses import KDLoss
 from simple_kd.training import evaluate_model
 from simple_kd.utils import SimpleGradClip
 
-from simple_kd.losses import KDLoss
 
 def gaussian_train(accelerator: Accelerator,
                 student_model: torch.nn.Module,
