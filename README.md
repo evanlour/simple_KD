@@ -1,5 +1,3 @@
-**INSERT INTRO IMAGE INSERT INTRO IMAGE**
-
 [![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![Accelerate](https://img.shields.io/badge/accelerate-distributed-orange.svg)](https://huggingface.co/docs/accelerate/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -57,41 +55,40 @@ accelerate library in order to support multiple GPUs.
 ## Supported Distillation Methods
 
 ### Logit-Based Distillation
-| Method | Class | Functional | Key Idea | Reference |
-| :--- | :--- | :--- | :--- | :--- |
-| **KD** | `KDLoss` | `kd_loss` | The original implementation, matching the teacher and student probabilities through the KL divergence | [https://arxiv.org/pdf/1503.02531](https://arxiv.org/pdf/1503.02531) |
-| **DKD** | `DKDLoss` | `dkd_loss` | The incorrect classes carry possible more knowledge than the correct one (dark knowledge) | [https://arxiv.org/pdf/2203.08679](https://arxiv.org/pdf/2203.08679) |
+| Method | Class | Functional | Key Idea |
+| :--- | :--- | :--- | :--- |
+| **KD** | `KDLoss` | `kd_loss` | The original implementation, matching the teacher and student probabilities through the KL divergence |
+| **DKD** | `DKDLoss` | `dkd_loss` | The incorrect classes carry possible more knowledge than the correct one (dark knowledge) |
 
 ### Feature & Attention-Based Distillation
-| Method | Class | Functional | Key Idea | Reference |
-| :--- | :--- | :--- | :--- | :--- |
-| **AT** | `ATLoss` | `at_loss` | Attention map matching between the teacher and the student models | [https://arxiv.org/pdf/1612.03928](https://arxiv.org/pdf/1612.03928) |
-| **SP** | `SPLoss` | `sp_loss` | Attempts to match the teacher and student representation space by keeping similar pairwise similarities | [https://arxiv.org/pdf/1907.09682](https://arxiv.org/pdf/1907.09682) |
+| Method | Class | Functional | Key Idea |
+| :--- | :--- | :--- | :--- |
+| **AT** | `ATLoss` | `at_loss` | Attention map matching between the teacher and the student models |
+| **SP** | `SPLoss` | `sp_loss` | Attempts to match the teacher and student representation space by keeping similar pairwise similarities |
 | **SSP** | `SSPLoss` | `ssp_loss` | Based on the [fitnets](https://arxiv.org/pdf/1412.6550) approach. Passes the stages through spatial pooling and then directly matches the teacher and student features | Custom |
 
 ### Relational Distillation
-| Method | Class | Functional | Key Idea | Reference |
-| :--- | :--- | :--- | :--- | :--- |
-| **RKD-Dist** | `RKDDistLoss` | `rkd_distance_loss` | Attempts to match the representation space of the teacher through the distance of couples | [https://arxiv.org/pdf/1904.05068](https://arxiv.org/pdf/1904.05068) |
-| **RKD-Angle** | `RKDAngleLoss` | `rkd_angle_loss` | Attempts to match the representation space of the teacher via the angle formed by a triplet of samples | [https://arxiv.org/pdf/1904.05068](https://arxiv.org/pdf/1904.05068) |
-| **PKT** | `PKTLoss` | `pkt_loss` | Distills through the representation space rather than the final predictions | https://arxiv.org/pdf/1803.10837 |
+| Method | Class | Functional | Key Idea |
+| :--- | :--- | :--- | :--- |
+| **RKD-Dist** | `RKDDistLoss` | `rkd_distance_loss` | Attempts to match the representation space of the teacher through the distance of couples |
+| **RKD-Angle** | `RKDAngleLoss` | `rkd_angle_loss` | Attempts to match the representation space of the teacher via the angle formed by a triplet of samples |
+| **PKT** | `PKTLoss` | `pkt_loss` | Distills through the representation space rather than the final predictions |
 
 ### Dynamic & Skeptical Arbitration
-| Method | Class | Functional | Key Idea | Reference |
-| :--- | :--- | :--- | :--- | :--- |
-| **Skeptical** | `SkepticalLoss` | `skeptical_loss` | Attempts to distill from a nasty teacher by distilling from earlier layers, which remain mostly unaffected | [https://openreview.net/pdf?id=Laz0L5tjml](https://openreview.net/pdf?id=Laz0L5tjml) |
-| **SCM(TODO)** | `-` | `-` | Combines the predictions of 2 or more models with different starting points, distillation methods etc. | [https://arxiv.org/pdf/2210.11728](https://arxiv.org/pdf/2210.11728) |
+| Method | Class | Functional | Key Idea |
+| :--- | :--- | :--- | :--- |
+| **Skeptical** | `SkepticalLoss` | `skeptical_loss` | Attempts to distill from a nasty teacher by distilling from earlier layers, which remain mostly unaffected |
 
 ### Data-Free Knowledge Distillation (DFKD)
-| Method | Function | Key Idea | Reference |
-| :--- | :--- | :--- | :--- |
-| **DAFL** | `dafl_train` | Multi-objective Generator based method for data free training of the student network| [https://arxiv.org/pdf/1904.01186](https://arxiv.org/pdf/1904.01186) |
-| **DFAD** | `dfad_train` | Minimize the discrepancy between the teacher and the student. Directly applicable to segmentation tasks | [https://arxiv.org/pdf/1912.11006](https://arxiv.org/pdf/1912.11006) |
-| **ZSKT** | `zskt_train` | A generator creates examples that the student poorly matches the teacher, and then trains on them | [https://arxiv.org/pdf/1905.09768](https://arxiv.org/pdf/1905.09768) |
-| **Gaussian distillation** | `gaussian_train`| Utilizes gaussian noise (or even synthetic noise) in order to train through the saved batch statistics | [https://proceedings.neurips.cc/paper_files/paper/2022/file/1f96b24df4b06f5d68389845a9a13ed9-Paper-Conference.pdf](https://proceedings.neurips.cc/paper_files/paper/2022/file/1f96b24df4b06f5d68389845a9a13ed9-Paper-Conference.pdf) |
-| **ODSD** | `odsd_train` | Choose low noise open world data to avoid domain shift issues and the generator module altogether | [https://arxiv.org/pdf/2307.16601v2](https://arxiv.org/pdf/2307.16601v2) | 
-| **FastDFKD(TODO)** | `fdfkd_train` | Use cached examples with common features to speed up the training process  immensely| [https://arxiv.org/pdf/2112.06253](https://arxiv.org/pdf/2112.06253) |
-| **ZSKD(TODO)** | `zskt_train` | Adversarial generator training with attention matching and student divergence | [https://arxiv.org/pdf/1905.08114](https://arxiv.org/pdf/1905.08114) |
+| Method | Function | Key Idea |
+| :--- | :--- | :--- |
+| **DAFL** | `dafl_train` | Multi-objective Generator based method for data free training of the student network|
+| **DFAD** | `dfad_train` | Minimize the discrepancy between the teacher and the student. Directly applicable to segmentation tasks |
+| **ZSKT** | `zskt_train` | A generator creates examples that the student poorly matches the teacher, and then trains on them |
+| **Gaussian distillation** | `gaussian_train`| Utilizes gaussian noise (or even synthetic noise) in order to train through the saved batch statistics |
+| **ODSD** | `odsd_train` | Choose low noise open world data to avoid domain shift issues and the generator module altogether |
+| **FastDFKD(TODO)** | `fdfkd_train` | Use cached examples with common features to speed up the training process  immensely|
+| **ZSKD(TODO)** | `zskt_train` | Adversarial generator training with attention matching and student divergence |
 
 ### Synthetic Noise & Inductive Bias Generators
 
@@ -168,15 +165,33 @@ The [examples](./examples) directory provides turnkey scripts ready to run:
 
 ## Performance Results
 
-The following table summarizes the performance of various distillation methods implemented in `simple_kd`:
+The following table summarizes the performance on CIFAR100 of various distillation methods implemented in `simple_kd`:
 
 | **Method**                       | **Accuracy** | **Loss** |  **F1 Score(macro)** |
 | :----------------                | :----------: | :------: | :------------------: |
 | **Teacher(Resnet34) baseline**   |    73.16%    |   1.052  |         0.7294       |
 | **Student(Resnet18) baseline**   |    72.84%    |   1.066  |         0.7271       |
-| **KD**                           |     -        |    -     |         -            |
+| **Student with low data**        |    52.26%    |   1.926  |         0.5172       |
+| **Non Data free methods**        | 
+| **AT**                           |    57.01%    |   1.694  |         0.5639       |
+| **DKD**                          |    67.05%    |   1.321  |         0.6669       |
+| **KD**                           |    60.18%    |   1.611  |         0.5968       |
+| **PKT**                          |    53.28%    |   1.863  |         0.5270       |
+| **RKD Angle**                    |    56.31%    |   1.738  |         0.5575       |
+| **RKD Dist**                     |    54.15%    |   1.813  |         0.5348       |
+| **SP**                           |    54.47%    |   1.819  |         0.5394       |
+| **SSP**                          |    54.57     |   1.785  |         0.5390       |
+| **Data free methods**            |
+| **DAFL**                         |     -        |    -     |         -            |
+| **DFAD**                         |     -        |    -     |         -            |
+| **Gaussian (Noise)**             |     -        |    -     |         -            |
+| **Gaussian (StyleGAN)**          |     -        |    -     |         -            |
+| **ODSD (50% StyleGAN)**          |     -        |    -     |         -            |
+| **ZSKT**                         |     -        |    -     |         -            |
 
 All the common hyperparameters between the methods such as the optimizer, the scheduler, the batch size etc for the non data free methods are the same. The data free methods vary a lot, so each method needs its own tuning.
+
+For distillation training only 20% of the train data were kept.
 
 These benchmarks are not representative of performance in real world problems but they give us an idea of how they work. Some methods are better suited for specific problems.
 
@@ -208,10 +223,27 @@ This project builds upon the following repositories and methods. Thanks to their
 
 | **Name / Method** | **Paper** | **GitHub Repo** |
 | :--- | :--- | :--- |
-| **AGC (Adaptive Gradient Clipping)** | [https://arxiv.org/pdf/2102.06171](https://arxiv.org/pdf/2102.06171) | [https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py](https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py) |
+| **AGC (Adaptive Gradient Clipping)** | [High-Performance Large-Scale Image Recognition Without Normalization](https://arxiv.org/pdf/2102.06171) | [https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py](https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py) |
+| **AT loss** | [PAYING MORE ATTENTION TO ATTENTION:IMPROVING THE PERFORMANCE OF CONVOLUTIONAL NEURAL NETWORKS VIA ATTENTION TRANSFER](https://arxiv.org/pdf/1612.03928) | [https://github.com/szagoruyko/attention-transfer](https://github.com/szagoruyko/attention-transfer) |
+| **DAFL** | [Data-Free Learning of Student Networks](https://arxiv.org/pdf/1904.01186) | [https://github.com/autogyro/DAFL](https://github.com/autogyro/DAFL) |
+| **DFAD** | [Data-Free Adversarial Distillation](https://arxiv.org/pdf/1912.11006) | [https://github.com/VainF/Data-Free-Adversarial-Distillation](https://github.com/VainF/Data-Free-Adversarial-Distillation) |
 | **DKD loss** | [Decoupled Knowledge Distillation](https://arxiv.org/pdf/2203.08679) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |
-| **Knowledge Distillation Zoo** | [https://arxiv.org/pdf/2203.08679](https://arxiv.org/pdf/2203.08679) | [https://github.com/AberHu/Knowledge-Distillation-Zoo](https://github.com/AberHu/Knowledge-Distillation-Zoo) |
+| **FastDFKD** | [Up to 100× Faster Data-free Knowledge Distillation](https://arxiv.org/pdf/2112.06253) | [https://github.com/zju-vipa/Fast-Datafree](https://github.com/zju-vipa/Fast-Datafree) |
+| **Feature Vis tools** | - | [Lucent](https://github.com/greentfrapp/lucent), [Lucid](https://github.com/tensorflow/lucid) |
+| **Gaussian** | [Discovering and Overcoming Limitations of Noise-engineered Data-free Knowledge Distillation](https://proceedings.neurips.cc/paper_files/paper/2022/file/1f96b24df4b06f5d68389845a9a13ed9-Paper-Conference.pdf) | [https://github.com/Piyush-555/GaussianDistillation](https://github.com/Piyush-555/GaussianDistillation) |
+| **KD loss** | [Distilling the Knowledge in a Neural Network](https://arxiv.org/pdf/1503.02531) | - |
+| **Knowledge Distillation Zoo** | - | [https://github.com/AberHu/Knowledge-Distillation-Zoo](https://github.com/AberHu/Knowledge-Distillation-Zoo) |
+| **StyleGAN2-ADA** | [Training Generative Adversarial Networks with Limited Data](https://arxiv.org/pdf/2006.06676) | [https://github.com/nvlabs/stylegan2-ada-pytorch](https://github.com/nvlabs/stylegan2-ada-pytorch) |
+| **Synthetic Noise Datasets** | [Learning to See by Looking at Noise](https://arxiv.org/pdf/2106.05963)] | [https://github.com/mbaradad/learning_with_noise](https://github.com/mbaradad/learning_with_noise) |
 | **mdistiller** | [DOT: A Distillation-Oriented Trainer](https://openaccess.thecvf.com/content/ICCV2023/papers/Zhao_DOT_A_Distillation-Oriented_Trainer_ICCV_2023_paper.pdf) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |
+| **ODSD** | [Sampling to Distill: Knowledge Transfer from Open-World Data](https://arxiv.org/pdf/2307.16601v2) | - |
+| **PKT loss** | [Learning Deep Representations with Probabilistic Knowledge Transfer](https://arxiv.org/pdf/1803.10837) | [https://github.com/passalis/probabilistic_kt](https://github.com/passalis/probabilistic_kt) |
+| **RKD (Angle, Dist) loss** | [Relational Knowledge Distillation](https://arxiv.org/pdf/1904.05068) | [https://github.com/lenscloth/RKD](https://github.com/lenscloth/RKD) |
+| **Skeptical loss** | [Analyzing the Confidentiality of Undistillable Teachers in Knowledge Distillation](https://openreview.net/pdf?id=Laz0L5tjml) | [https://github.com/ksouvik52/Skeptical2021](https://github.com/ksouvik52/Skeptical2021) |
+| **SP loss** | [Similarity-Preserving Knowledge Distillation](https://arxiv.org/pdf/1907.09682) | [https://github.com/DongGeun-Yoon/SPKD](https://github.com/DongGeun-Yoon/SPKD) |
+| **SSP Loss** | (*Original method, based on*) [FITNETS: HINTS FOR THIN DEEP NETS](https://arxiv.org/pdf/1412.6550) | [https://github.com/adri-romsor/FitNets](https://github.com/adri-romsor/FitNets) |
+| **ZSKD** | [Zero-Shot Knowledge Distillation in Deep Networks](https://arxiv.org/pdf/1905.08114) | [https://github.com/vcl-iisc/ZSKD](https://github.com/vcl-iisc/ZSKD) |
+| **ZSKT** | [Zero-shot Knowledge Transfer via Adversarial Belief Matching](https://arxiv.org/pdf/1905.09768) | [https://github.com/polo5/ZeroShotKnowledgeTransfer](https://github.com/polo5/ZeroShotKnowledgeTransfer) |
 
 ---
 
