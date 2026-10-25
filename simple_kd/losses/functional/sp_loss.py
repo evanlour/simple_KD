@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 def _get_sp_feats(stage: torch.Tensor) -> torch.Tensor:
     """Helper function that returns the matrix similarities."""
-    stage_flat = stage.view(stage.size(0), -1)
+    stage_flat = stage.reshape(stage.size(0), -1)
     feats = torch.mm(stage_flat, stage_flat.t())
     feats = F.normalize(feats, p=2, dim=1)
     return feats
