@@ -1,6 +1,7 @@
 simple_kd.egg-info/
 .ropeproject/
 .ruff_cache/
+.mypy_cache/
 utils/__pychache__/
 simple_kd/utils/__pycache__/
 simple_kd/losses/__pycache__/
