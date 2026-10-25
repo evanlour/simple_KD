@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from accelerate import Accelerator
 from torch.utils import data
-from torchvision.models import resnet34
+from torchvision.models import resnet18
 from torchvision.transforms import v2
 
 from simple_kd.training import evaluate_model, train
@@ -22,7 +22,7 @@ VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_test_results"
+TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_train_results"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
 
@@ -39,7 +39,7 @@ GPU_AUGS = v2.Compose(
                 v2.MixUp(num_classes=CLASSES, alpha=0.8),
                 v2.Identity(),
             ],
-            p=[0.4, 0.4, 0.2],
+            p=[0.45, 0.45, 0.1],
         ),
     ]
 )
@@ -84,6 +84,8 @@ if __name__ == "__main__":
     torch.set_float32_matmul_precision(
         "high"
     )  # From least to most performant: ["Highest", "High", "Medium"]
+    torch.backends.cuda.matmul.allow_tf32 = True  # Disable if unsupported
+    torch.backends.cudnn.allow_tf32 = True  # Disable if unsupported
 
     # Load Dataset
     trainset = Dataset(
@@ -107,7 +109,6 @@ if __name__ == "__main__":
         shuffle=True,
         num_workers=WORKERS,
         pin_memory=True,
-        pin_memory_device=device.type,
         prefetch_factor=2,
         generator=generator,
         persistent_workers=True,
@@ -127,25 +128,28 @@ if __name__ == "__main__":
         worker_init_fn=seed_worker,
     )
 
-    model = resnet34()
+    model = resnet18()
     model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     model.maxpool = torch.nn.Identity()  # type: ignore
     feats = model.fc.in_features
     model.fc = torch.nn.Linear(feats, CLASSES)
 
-    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.2)
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=1e-3, betas=(0.9, 0.999), weight_decay=0.05, fused=True
+        model.parameters(), lr=1e-3, weight_decay=0.05, betas=(0.9, 0.999), fused=True
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=EPOCHS, eta_min=1e-6
+        optimizer, T_max=EPOCHS, eta_min=1e-5
     )
 
     model = model.to(memory_format=torch.channels_last)  # type: ignore
     model, train_loader, val_loader, optimizer = accelerator.prepare(
-        model, train_loader, val_loader, optimizer
+        model,
+        train_loader,
+        val_loader,
+        optimizer,
     )
     model = torch.compile(model)
 
