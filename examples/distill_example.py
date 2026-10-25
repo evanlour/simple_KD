@@ -4,7 +4,9 @@ from pathlib import Path
 import numpy as np
 import torch
 from accelerate import Accelerator
+from sklearn.model_selection import train_test_split
 from torch.utils import data
+from torch.utils.data import Subset
 from torchvision.models import resnet18, resnet34
 from torchvision.transforms import v2
 
@@ -23,7 +25,9 @@ VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TEACHER_MODEL_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_test_results/model.pth"
+TEACHER_MODEL_LOCATION = (
+    "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
+)
 TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_distillation_results"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
@@ -86,9 +90,11 @@ if __name__ == "__main__":
     torch.set_float32_matmul_precision(
         "high"
     )  # From least to most performant: ["Highest", "High", "Medium"]
+    torch.backends.cuda.matmul.allow_tf32 = True  # Disable if unsupported
+    torch.backends.cudnn.allow_tf32 = True  # Disable if unsupported
 
     # Load Dataset
-    trainset = Dataset(
+    full_trainset = Dataset(
         TRAIN_IMAGES_LOCATION,
         TRAIN_LABELS_LOCATION,
         loading_mode="r+",
@@ -100,6 +106,24 @@ if __name__ == "__main__":
         loading_mode="r+",
         augmentations=CPU_AUGS,
     )
+    # We will simulate a low data run by dumping 80% of the CIFAR100 data
+    full_labels = np.load(
+        TRAIN_LABELS_LOCATION
+    )  # Labels are small so it is okay to load them all
+    indices = np.arange(len(full_labels))
+
+    # We will keep only the 20% of the indices.
+    subset_idx, _ = train_test_split(
+        indices,
+        train_size=0.2,
+        stratify=full_labels,
+        random_state=42,
+    )
+    subset_idx = np.sort(
+        subset_idx
+    )  # Supposedly better read times, will need to be tested
+    trainset = Subset(full_trainset, subset_idx)  # type: ignore
+
     generator = torch.Generator()
 
     generator.manual_seed(58709)
@@ -122,7 +146,6 @@ if __name__ == "__main__":
         shuffle=False,
         num_workers=WORKERS,
         pin_memory=True,
-        pin_memory_device=device.type,
         prefetch_factor=2,
         generator=generator,
         persistent_workers=True,
@@ -131,7 +154,7 @@ if __name__ == "__main__":
 
     teacher_model = resnet34()
     teacher_model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     teacher_model.maxpool = torch.nn.Identity()  # type: ignore
     feats = teacher_model.fc.in_features
@@ -144,7 +167,7 @@ if __name__ == "__main__":
 
     student_model = resnet18()
     student_model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     student_model.maxpool = torch.nn.Identity()  # type: ignore
     student_feats = student_model.fc.in_features
@@ -160,7 +183,7 @@ if __name__ == "__main__":
         fused=True,
     )
     student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        student_optimizer, T_max=EPOCHS, eta_min=1e-6
+        student_optimizer, T_max=EPOCHS, eta_min=1e-5
     )
 
     student_model = student_model.to(memory_format=torch.channels_last)  # type: ignore
