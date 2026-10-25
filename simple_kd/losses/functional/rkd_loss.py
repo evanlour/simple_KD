@@ -43,7 +43,7 @@ def _get_distance_feats(stage: torch.Tensor) -> torch.Tensor:
 def rkd_angle_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-    stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
+    stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
     gamma: float = 64.0,
 ) -> torch.Tensor:
     """Code implementation of the RKD method: Angle variant.
@@ -57,7 +57,7 @@ def rkd_angle_loss(
     Args:
         student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model.
         teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the teacher model.
-        stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
+        stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
         gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 64.0.
 
     Returns:
@@ -79,8 +79,8 @@ def rkd_angle_loss(
 def rkd_dist_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-    stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
-    gamma: float = 4.0,
+    stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
+    gamma: float = 128.0,
 ) -> torch.Tensor:
     """Code implementation of the RKD method: Distance variant.
 
@@ -93,8 +93,8 @@ def rkd_dist_loss(
     Args:
         student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model.
         teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the teacher model.
-        stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
-        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 64.0.
+        stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
+        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 128.0.
 
     Returns:
         torch.Tensor: The distillation loss.

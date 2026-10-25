@@ -13,8 +13,8 @@ def _get_sp_feats(stage: torch.Tensor) -> torch.Tensor:
 def sp_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-    stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
-    gamma: float = 64.0,
+    stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
+    gamma: float = 512.0,
 ) -> torch.Tensor:
     """Code implementation of the Similarity Preservation (SP) method.
 
@@ -27,8 +27,8 @@ def sp_loss(
     Args:
         student_stages (list[torch.Tensor]): List of intermediate activations for the student model.
         teacher_stages (list[torch.Tensor]): List of intermediate activations for the teacher model.
-        stage_percentages (tuple[float] | list[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
-        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 64.0.
+        stage_percentages (tuple[float] | list[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
+        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 512.0.
 
     Returns:
         torch.Tensor: The distillation loss.

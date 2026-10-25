@@ -13,15 +13,15 @@ class SSPLoss(torch.nn.Module):
     The original code can be found at https://github.com/adri-romsor/FitNets.
 
     Args:
-        gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.
-        stage_percentages (tuple[float, ...] | list[float], optional): Relative weights for each network stage. Defaults to (0.25, 0.25, 0.25, 0.25).
+        gamma (float, optional): Multiplier for the final loss value. Defaults to 32.0.
+        stage_percentages (tuple[float, ...] | list[float], optional): Relative weights for each network stage. Defaults to (0.1, 0.1, 0.2, 0.6).
         sort_channels (bool, optional): Whether to sort channel activations in descending order before comparison. Defaults to True.
     """
 
     def __init__(
         self,
-        gamma: float = 64.0,
-        stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
+        gamma: float = 32.0,
+        stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
         sort_channels: bool = True,
     ):
         super().__init__()

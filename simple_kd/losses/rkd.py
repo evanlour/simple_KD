@@ -16,13 +16,13 @@ class RKDAngleLoss(torch.nn.Module):
 
     Args:
         gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.
-        stage_percentages (list[float] | tuple[float, ...], optional): Relative weights for each stage. Defaults to (0.25, 0.25, 0.25, 0.25).
+        stage_percentages (list[float] | tuple[float, ...], optional): Relative weights for each stage. Defaults to (0.1, 0.1, 0.2, 0.6).
     """
 
     def __init__(
         self,
         gamma: float = 64.0,
-        stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+        stage_percentages: list[float] | tuple[float, ...] = (0.1, 0.1, 0.2, 0.6),
     ):
         super().__init__()
         self.stage_percentages = stage_percentages
@@ -62,14 +62,14 @@ class RKDDistLoss(torch.nn.Module):
     Similar code can be found at https://github.com/megvii-research/mdistiller/tree/master.
 
     Args:
-        gamma (float, optional): Multiplier for the final loss value. Defaults to 64.0.
-        stage_percentages (list[float] | tuple[float, ...], optional): Relative weights for each stage. Defaults to (0.25, 0.25, 0.25, 0.25).
+        gamma (float, optional): Multiplier for the final loss value. Defaults to 128.0.
+        stage_percentages (list[float] | tuple[float, ...], optional): Relative weights for each stage. Defaults to (0.1, 0.1, 0.2, 0.6).
     """
 
     def __init__(
         self,
-        gamma: float = 64.0,
-        stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+        gamma: float = 128.0,
+        stage_percentages: list[float] | tuple[float, ...] = (0.1, 0.1, 0.2, 0.6),
     ):
         super().__init__()
         self.stage_percentages = stage_percentages

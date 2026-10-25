@@ -31,7 +31,7 @@ def _single_pkt_loss(
 def pkt_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-    stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+    stage_percentages: list[float] | tuple[float, ...] = (0.1, 0.1, 0.2, 0.6),
     gamma: float = 256.0,
     eps: float = 1e-6,
 ) -> torch.Tensor:
@@ -45,7 +45,7 @@ def pkt_loss(
     Args:
             student_stages list[torch.Tensor] | tuple[torch.Tensor, ...]: The student model output.
             teacher_stages list[torch.Tensor] | tuple[torch.Tensor, ...]: The teacher model output.
-            stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
+            stage_percentages (list[float] | tuple[float, ...], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
             gamma (float, optional): Loss multiplier for the method. Defaults to 256.0.
             eps (float, optional): Prevents division by zero. Defaults to 1e-6.
 

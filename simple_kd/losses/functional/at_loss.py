@@ -14,9 +14,9 @@ def _attention_map(stage, power):
 def at_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-    stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
+    stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
     power: float = 2.0,
-    gamma: float = 64.0,
+    gamma: float = 256.0,
 ) -> torch.Tensor:
     """Code implementation of the Attention Transfer(AT) method.
 
@@ -30,9 +30,9 @@ def at_loss(
     Args:
         student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model.
         teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the teacher model.
-        stage_percentages (tuple[float] | list[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
+        stage_percentages (tuple[float] | list[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
         power (float, optional): The power the stages are elevated at to retrieve the attention map. Defaults to 2.0.
-        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 64.0.
+        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 256.0.
 
     Returns:
         torch.Tensor: The distillation loss.

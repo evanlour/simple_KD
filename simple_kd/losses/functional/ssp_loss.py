@@ -5,8 +5,8 @@ import torch.nn.functional as F
 def ssp_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-    stage_percentages: tuple[float, ...] | list[float] = (0.25, 0.25, 0.25, 0.25),
-    gamma: float = 4.0,
+    stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
+    gamma: float = 32.0,
     sort_channels: bool = True,
 ) -> torch.Tensor:
     """Simple feature based loss for knowledge distillation. Number of stages between teacher and student, along with the length of stage percentages must match.
@@ -17,8 +17,8 @@ def ssp_loss(
     Args:
         student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the student model.
         teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): List of intermediate activations for the teacher model.
-        stage_percentages (tuple[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.25, 0.25, 0.25, 0.25).
-        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 4.0.
+        stage_percentages (tuple[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
+        gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 32.0.
         sort_channels (bool, optional): Sorts the flattened dimensions of the student and teacher stages. Speeds up the function by a lot and seems to yield better results.
 
     Returns:
