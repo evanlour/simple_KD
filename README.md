@@ -5,15 +5,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-simple_KD is a library that combines non data free methods implemented by repositories such as mdistiller and the Knowledge Distillation Zoo as well as popular data free distillation methods and implements them with pytorch-style structure and calling. The library also uses the Huggin face
+simple_KD is a library that combines non data free methods implemented by repositories such as mdistiller and the Knowledge Distillation Zoo as well as popular data free distillation methods and implements them with pytorch-style structure and calling. The library also uses the Hugging face
 accelerate library in order to support multiple GPUs.
 
 ---
 
-## Table of Contents (REORGANIZE)
+## Table of Contents
 
 - [Overview](#overview)
-- [Key Features](#key-features)
+- [Conveniences](#conveniences)
 - [Supported Distillation Methods](#supported-distillation-methods)
   - [Logit-Based Distillation](#logit-based-distillation)
   - [Feature & Attention-Based Distillation](#feature--attention-based-distillation)
@@ -22,20 +22,11 @@ accelerate library in order to support multiple GPUs.
   - [Data-Free Knowledge Distillation (DFKD)](#data-free-knowledge-distillation-dfkd)
   - [Synthetic Noise & Inductive Bias Generators](#synthetic-noise--inductive-bias-generators)
 - [Installation](#installation)
-- [Quickstart Guide](#quickstart-guide)
-  - [1. Classical Knowledge Distillation](#1-classical-knowledge-distillation)
-  - [2. Data-Free Distillation (DAFL / DFAD)](#2-data-free-distillation-dafl--dfad)
-  - [3. Synthetic Noise Generation](#3-synthetic-noise-generation)
-- [Module Deep-Dives](#module-deep-dives)
-  - [Losses (`simple_kd.losses`)](#losses-simple_kdlosses)
-  - [Data-Free Suite (`simple_kd.data_free`)](#data-free-suite-simple_kddata_free)
-  - [Generators & Synthetic Noise (`simple_kd.generators`)](#generators--synthetic-noise-simple_kdgenerators)
-  - [Training & Distillation Engine (`simple_kd.training`)](#training--distillation-engine-simple_kdtraining)
-  - [Performance Profiler (`simple_kd.training.profiling`)](#performance-profiler-simple_kdtrainingprofiling)
-  - [Data & Hook Utilities (`simple_kd.utils`)](#data--hook-utilities-simple_kdutils)
+- [Data & Hook Utilities](#data--hook-utilities-simple_kdutils)
 - [Included Examples](#included-examples)
+- [Performance Results](#performance-results)
 - [Testing & Quality Verification](#testing--quality-verification)
-- [References & Citation](#references--citation)
+- [Acknowledgements](#acknowledgements)
 - [License](#license)
 
 ---
@@ -49,12 +40,12 @@ accelerate library in order to support multiple GPUs.
 - **Distributed by Default**: Built from the ground up on Hugging Face [Accelerate](https://huggingface.co/docs/accelerate/) — effortlessly runs on CPU, single GPU, Multi-GPU Distributed Data Parallel (DDP), and mixed precision (`fp16`, `bf16`).
 - **Data-Free Distillation Ready**: Full end-to-end training loops for **DAFL**, **DFAD**, and **ZSKT**, along with other methods, including unified generator statistics tracking (entropy, confidence, diversity spread) and gradient clipping.
 - **Synthetic Noise Datasets**: Generates structured noise datasets (Dead Leaves, Fourier Feature Inversion, Wavelet Steerable Pyramids, Untrained StyleGAN2) allowing networks to learn visual inductive biases without natural data.
-- **Simplicity**: Designed from scratch to  be easy to pick up and familiar to the pytorch syntax.
+- **Simplicity**: Designed from scratch to be easy to pick up and familiar to the pytorch syntax.
 - **Zero-Leak Hook Management**: `FeatureSelector` automatically manages PyTorch forward hooks and garbage collection for multi-layer representation distillation.
 
 ---
 
-## Key Features
+## Conveniences
 
 - **A vast amount of available techniques**: Logit matching (KD, DKD), spatial attention (AT), representation similarity (SP, SSP), geometric relationships (RKD-Distance, RKD-Angle, PKT), and skeptical student gating.
 - **Modular Data-Free Engines**: Plug-and-play adversarial and generative distillation algorithms.
@@ -83,7 +74,7 @@ accelerate library in order to support multiple GPUs.
 | :--- | :--- | :--- | :--- | :--- |
 | **RKD-Dist** | `RKDDistLoss` | `rkd_distance_loss` | Attempts to match the representation space of the teacher through the distance of couples | [https://arxiv.org/pdf/1904.05068](https://arxiv.org/pdf/1904.05068) |
 | **RKD-Angle** | `RKDAngleLoss` | `rkd_angle_loss` | Attempts to match the representation space of the teacher via the angle formed by a triplet of samples | [https://arxiv.org/pdf/1904.05068](https://arxiv.org/pdf/1904.05068) |
-| **PKT** | `PKTLoss` | `pkt_loss` | Distills through the representation space rathen than the final predictions | https://arxiv.org/pdf/1803.10837 |
+| **PKT** | `PKTLoss` | `pkt_loss` | Distills through the representation space rather than the final predictions | https://arxiv.org/pdf/1803.10837 |
 
 ### Dynamic & Skeptical Arbitration
 | Method | Class | Functional | Key Idea | Reference |
@@ -98,7 +89,7 @@ accelerate library in order to support multiple GPUs.
 | **DFAD** | `dfad_train` | Minimize the discrepancy between the teacher and the student. Directly applicable to segmentation tasks | [https://arxiv.org/pdf/1912.11006](https://arxiv.org/pdf/1912.11006) |
 | **ZSKT** | `zskt_train` | A generator creates examples that the student poorly matches the teacher, and then trains on them | [https://arxiv.org/pdf/1905.09768](https://arxiv.org/pdf/1905.09768) |
 | **Gaussian distillation** | `gaussian_train`| Utilizes gaussian noise (or even synthetic noise) in order to train through the saved batch statistics | [https://proceedings.neurips.cc/paper_files/paper/2022/file/1f96b24df4b06f5d68389845a9a13ed9-Paper-Conference.pdf](https://proceedings.neurips.cc/paper_files/paper/2022/file/1f96b24df4b06f5d68389845a9a13ed9-Paper-Conference.pdf) |
-| **ODSD(TODO)** | `odsd_train` | Choose low noise open world data to avoid domain shift issues and the generator module altogether | [https://arxiv.org/pdf/2307.16601v2](https://arxiv.org/pdf/2307.16601v2) | 
+| **ODSD** | `odsd_train` | Choose low noise open world data to avoid domain shift issues and the generator module altogether | [https://arxiv.org/pdf/2307.16601v2](https://arxiv.org/pdf/2307.16601v2) | 
 | **FastDFKD(TODO)** | `fdfkd_train` | Use cached examples with common features to speed up the training process  immensely| [https://arxiv.org/pdf/2112.06253](https://arxiv.org/pdf/2112.06253) |
 | **ZSKD(TODO)** | `zskt_train` | Adversarial generator training with attention matching and student divergence | [https://arxiv.org/pdf/1905.08114](https://arxiv.org/pdf/1905.08114) |
 
@@ -123,7 +114,10 @@ The library has also integrated several options first mentioned in the Paper [Le
 - Python >= 3.10
 - PyTorch >= 2.0.0
 - torchvision >= 0.15.0
-- 4.0 >= opencv-python <= 5.0 
+- 4.0 <= opencv-python <= 5.0
+- pyarrow>=22.0
+- scikit-learn>=1.7
+- accelerate>=0.20.0
 
 ### Install from Source
 ```bash
@@ -140,7 +134,7 @@ pip install -e ".[viz,dev]"
 
 ---
 
-### Data & Hook Utilities (`simple_kd.utils`)
+## Data & Hook Utilities
 
 - **`Dataset`, `LabelFreeDataset` & `InMemoryDataset`** ([simple_kd/utils/dataset.py](./simple_kd/utils/dataset.py)):
   Simple ready-to-use Dataset classes to load .npy files, either using a dataloader or directly in memory.
@@ -153,7 +147,7 @@ pip install -e ".[viz,dev]"
 
 ---
 
-## Included Examples(TODO)
+## Included Examples
 
 The [examples](./examples) directory provides turnkey scripts ready to run:
 
@@ -165,10 +159,26 @@ The [examples](./examples) directory provides turnkey scripts ready to run:
 | [dfad_example.py](./examples/dfad_example.py) | Data-Free Adversarial Distillation (DFAD) with min-max game. | `python ./examples/dfad_example.py` |
 | [zskt_example.py](./examples/zskt_example.py) | Zero-Shot Knowledge Transfer (ZSKT) adversarial training. | `python ./examples/zskt_example.py` |
 | [gaussian_example.py](./examples/gaussian_example.py) | Distillation with pure synthetic Gaussian noise. | `python ./examples/gaussian_example.py` |
-| [generate_synthetic_noise.py](./simple_KD/examples/generate_synthetic_noise.py) | Generates Dead Leaves and StyleGAN synthetic datasets. | `python ./examples/generate_synthetic_noise.py` |
+| [generate_synthetic_noise.py](./examples/generate_synthetic_noise.py) | Generates Dead Leaves and StyleGAN synthetic datasets. | `python ./examples/generate_synthetic_noise.py` |
 | [select_layers.py](./examples/select_layers.py) | Inspect model layers and verify hook extraction. | `python ./examples/select_layers.py` |
 | [prepare_data.py](./examples/prepare_data.py) | Prepares(and downloads) the dataset that will be tested. Currently only CIFAR100 | `python ./examples/prepare_data.py` |
 | [use_train_profiler.py](./examples/use_train_profiler.py) | Runs PyTorch Profiler on a sample training loop. | `python ./examples/use_train_profiler.py` |
+
+---
+
+## Performance Results
+
+The following table summarizes the performance of various distillation methods implemented in `simple_kd`:
+
+| **Method**                       | **Accuracy** | **Loss** |  **F1 Score(macro)** |
+| :----------------                | :----------: | :------: | :------------------: |
+| **Teacher(Resnet34) baseline**   |    73.16%    |   1.052  |         0.7294       |
+| **Student(Resnet18) baseline**   |    72.84%    |   1.066  |         0.7271       |
+| **KD**                           |     -        |    -     |         -            |
+
+All the common hyperparameters between the methods such as the optimizer, the scheduler, the batch size etc for the non data free methods are the same. The data free methods vary a lot, so each method needs its own tuning.
+
+These benchmarks are not representative of performance in real world problems but they give us an idea of how they work. Some methods are better suited for specific problems.
 
 ---
 
@@ -188,20 +198,23 @@ Run code formatting and static type checking:
 ```bash
 ruff check .
 ruff format .
-mypy simple_kd
 ```
 
 ---
 
 ## Acknowledgements
 
-These are the repositories of which this project was based upon. Thanks to their authors and maintainers.
+This project builds upon the following repositories and methods. Thanks to their authors and maintainers.
 
-- mdistiller: [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller)
-- Knowledge-Distillation-Zoo: [https://github.com/AberHu/Knowledge-Distillation-Zoo](https://github.com/AberHu/Knowledge-Distillation-Zoo)
-- The AGC implementation was taken from the timm repository: [https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py](https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py)
+| **Name / Method** | **Paper** | **GitHub Repo** |
+| :--- | :--- | :--- |
+| **AGC (Adaptive Gradient Clipping)** | [https://arxiv.org/pdf/2102.06171](https://arxiv.org/pdf/2102.06171) | [https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py](https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py) |
+| **DKD loss** | [Decoupled Knowledge Distillation](https://arxiv.org/pdf/2203.08679) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |
+| **Knowledge Distillation Zoo** | [https://arxiv.org/pdf/2203.08679](https://arxiv.org/pdf/2203.08679) | [https://github.com/AberHu/Knowledge-Distillation-Zoo](https://github.com/AberHu/Knowledge-Distillation-Zoo) |
+| **mdistiller** | [DOT: A Distillation-Oriented Trainer](https://openaccess.thecvf.com/content/ICCV2023/papers/Zhao_DOT_A_Distillation-Oriented_Trainer_ICCV_2023_paper.pdf) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |
 
 ---
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
