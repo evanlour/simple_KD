@@ -1,4 +1,4 @@
-"""Original code is from https://github.com/mbaradad/learning_with_noise/blob/main/generate_datasets/dead_leaves/generate_dataset.py
+"""Original code is from https://github.com/mbaradad/learning_with_noise
 Credits to the author there! The paper Learning to See by Looking at Noise (Baraded et al.) Can be found at https://arxiv.org/abs/2106.05963.
 """
 
@@ -349,7 +349,10 @@ def generate_statistical_sample(
         target_mag = sample_1f_spectrum(B, resolution, device=device)
     if impose_wmm_flag:
         target_subbands = sample_wmm_model(
-            B, filters.shape[0], resolution, device=device
+            B,
+            filters.shape[0],  # type: ignore
+            resolution,
+            device=device,
         )  # type: ignore
 
     for _ in range(n_iter):

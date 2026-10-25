@@ -1,4 +1,4 @@
-"""Original code is from https://github.com/mbaradad/learning_with_noise/blob/main/generate_datasets/dead_leaves/generate_dataset.py
+"""Original code is from https://github.com/mbaradad/learning_with_noise
 Credits to the author there! The paper Learning to See by Looking at Noise (Baraded et al.) Can be found at https://arxiv.org/abs/2106.05963.
 A part of the code includes code from lucent, the pytorch port of the lucid library from tensorflow. The corresponding links are the following:
 For the pytorch port: https://github.com/greentfrapp/lucent. For the tensorflow lucid: https://github.com/tensorflow/lucid

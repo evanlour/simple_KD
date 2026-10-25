@@ -1,4 +1,4 @@
-"""Original code is from https://github.com/mbaradad/learning_with_noise/blob/main/generate_datasets/dead_leaves/generate_dataset.py
+"""Original code is from https://github.com/mbaradad/learning_with_noise
 Credits to the author there! The paper Learning to See by Looking at Noise (Baraded et al.) Can be found at https://arxiv.org/abs/2106.05963.
 StyleGan code was from the paper Training Generative Adversarial Networks with Limited Data https://arxiv.org/abs/2006.06676 and the original
 implementation can be found here https://github.com/nvlabs/stylegan2-ada-pytorch
