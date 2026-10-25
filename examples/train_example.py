@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from accelerate import Accelerator
 from torch.utils import data
-from torchvision.models import resnet18
+from torchvision.models import resnet34
 from torchvision.transforms import v2
 
 from simple_kd.training import evaluate_model, train
@@ -128,7 +128,7 @@ if __name__ == "__main__":
         worker_init_fn=seed_worker,
     )
 
-    model = resnet18()
+    model = resnet34()
     model.conv1 = torch.nn.Conv2d(
         in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
