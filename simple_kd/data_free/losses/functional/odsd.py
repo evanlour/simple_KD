@@ -2,35 +2,60 @@ import torch
 import torch.nn.functional as F
 
 
-def barlow_twins_loss(
+def instance_contrastive_loss(
     basic_input: torch.Tensor,
     augmented_input: torch.Tensor,
-    loss_lambda: float = 0.005,
+    tau: float = 0.5,
 ) -> torch.Tensor:
-    """Computes the Barlow Twins cross-correlation contrastive loss between two representations.
+    """Computes the instance contrastive input"""
 
-    The original paper is Barlow Twins: Self-Supervised Learning via Redundancy Reduction (https://arxiv.org/pdf/2103.03230)
+    normalized_basic = F.normalize(basic_input, p=2, dim=1)
+    normalized_aug = F.normalize(augmented_input, p=2, dim=1)
+    n = normalized_basic.size(0)
 
-    The original code implementation can be found at https://github.com/facebookresearch/barlowtwins
+    z = torch.cat([normalized_basic, normalized_aug], dim=0)
+
+    sim_matrix = torch.mm(normalized_basic, z.t()) / tau  # All pairwise similarities
+    positives = sim_matrix[
+        torch.arange(n), torch.arange(n) + n
+    ]  # The upper equation part of lc1
+
+    # Mask out self-contrast (k == i in denominator)
+    mask = torch.ones_like(sim_matrix, dtype=torch.bool)
+    mask[torch.arange(n), torch.arange(n)] = False
+
+    exp_sim = torch.exp(sim_matrix) * mask
+    denom = exp_sim.sum(dim=1)
+
+    l_c1 = -torch.log(torch.exp(positives) / denom).mean()
+    return l_c1
+
+
+def teacher_student_contrastive_loss(
+    student_all: torch.Tensor,
+    teacher_all: torch.Tensor,
+    tau: float = 0.5,
+) -> torch.Tensor:
+    """Computes the teacher student contrastive loss.
 
     Args:
-        basic_input (torch.Tensor): Feature representations from basic/weakly augmented view (shape: [B, D]).
-        augmented_input (torch.Tensor): Feature representations from strongly augmented view (shape: [B, D]).
-        loss_lambda (float, optional): Multiplier for off-diagonal redundancy reduction terms. Defaults to 0.005.
-
-    Returns:
-        torch.Tensor: Scalar Barlow Twins loss.
+        student_all: Concatenated [student_weak, student_strong] (shape [2N, C])
+        teacher_all: Concatenated [teacher_weak, teacher_strong] (shape [2N, C])
     """
-    in_basic = (basic_input - basic_input.mean(0)) / (basic_input.std(0) + 1e-6)
-    in_aug = (augmented_input - augmented_input.mean(0)) / (
-        augmented_input.std(0) + 1e-6
-    )
+    z_s = F.normalize(student_all, p=2, dim=1)
+    z_t = F.normalize(teacher_all, p=2, dim=1)
+    two_n = z_s.size(0)
 
-    c = torch.mm(in_basic.T, in_aug) / in_basic.size(0)
-    on_diag = torch.diagonal(c).add_(-1).pow_(2).sum()
-    off_diag = c.pow(2).sum() - torch.diagonal(c).pow(2).sum()
+    sim_matrix = torch.mm(z_t, z_s.t()) / tau
+    positives = torch.diagonal(sim_matrix)
 
-    return on_diag + loss_lambda * off_diag
+    # Mask out self-comparison (k == i) in denominator
+    mask = ~torch.eye(two_n, dtype=torch.bool, device=z_s.device)
+    exp_sim = torch.exp(sim_matrix) * mask
+    denom = exp_sim.sum(dim=1)
+
+    l_c2 = -torch.log(torch.exp(positives) / denom).mean()
+    return l_c2
 
 
 def spatial_mapping_loss(
@@ -84,8 +109,8 @@ def odsd_loss(
     kd_modifier: float = 1.0,
     spatial_modifier: float = 4.0,
     relational_modifier: float = 4.0,
-    barlow_twins_lambda: float = 0.005,
     huber_delta: float = 1.0,
+    tau: float = 0.5,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Computes the combined Out-of-Distribution Sample Distillation (ODSD) loss.
 
@@ -103,8 +128,8 @@ def odsd_loss(
         kd_modifier (float, optional): Multiplier for KD loss. Defaults to 1.0.
         spatial_modifier (float, optional): Multiplier for spatial mapping loss. Defaults to 4.0.
         relational_modifier (float, optional): Multiplier for Barlow Twins relational loss. Defaults to 4.0.
-        barlow_twins_lambda (float, optional): Lambda parameter for off-diagonal Barlow Twins terms. Defaults to 0.005.
         huber_delta (float, optional): Delta parameter for Huber loss in spatial mapping. Defaults to 1.0.
+        tau (float, optional): Constrastive relational loss temperature. Defaults to 0.5.
 
     Returns:
         tuple[torch.Tensor, dict[str, torch.Tensor]]:
@@ -130,17 +155,19 @@ def odsd_loss(
         * spatial_modifier
     )
 
-    # 3. Contrastive Relational Loss (Barlow Twins)
-    combined_features = torch.cat([student_output, teacher_output], dim=0)
-    combined_basic_features = torch.cat(
-        [student_basic_output, teacher_basic_output], dim=0
-    )
+    # Contrastive Relational Loss
+    combined_student = torch.cat([student_basic_output, student_output], dim=0)
+    combined_teacher = torch.cat([teacher_basic_output, teacher_output], dim=0)
 
-    contrastive_loss1 = barlow_twins_loss(
-        student_basic_output, student_output, loss_lambda=barlow_twins_lambda
+    contrastive_loss1 = instance_contrastive_loss(
+        student_basic_output,
+        student_output,
+        tau=tau,
     )
-    contrastive_loss2 = barlow_twins_loss(
-        combined_basic_features, combined_features, loss_lambda=barlow_twins_lambda
+    contrastive_loss2 = teacher_student_contrastive_loss(
+        combined_student,
+        combined_teacher,
+        tau=tau,
     )
     relational_loss = (contrastive_loss1 + contrastive_loss2) * relational_modifier
 

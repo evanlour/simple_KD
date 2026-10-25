@@ -13,8 +13,8 @@ class ODSDLoss(torch.nn.Module):
         kd_modifier (float, optional): Multiplier for KD loss. Defaults to 1.0.
         spatial_modifier (float, optional): Multiplier for spatial mapping loss. Defaults to 4.0.
         relational_modifier (float, optional): Multiplier for Barlow Twins relational loss. Defaults to 4.0.
-        barlow_twins_lambda (float, optional): Lambda parameter for off-diagonal Barlow Twins terms. Defaults to 0.005.
         huber_delta (float, optional): Delta parameter for Huber loss in spatial mapping. Defaults to 1.0.
+        tau (float, optional): Constrastive relational loss temperature. Defaults to 0.5.
     """
 
     def __init__(
@@ -23,15 +23,15 @@ class ODSDLoss(torch.nn.Module):
         kd_modifier: float = 1.0,
         spatial_modifier: float = 4.0,
         relational_modifier: float = 4.0,
-        barlow_twins_lambda: float = 0.005,
         huber_delta: float = 1.0,
+        tau: float = 1.0,
     ):
         super().__init__()
         self.kd_temperature = kd_temperature
         self.kd_modifier = kd_modifier
         self.spatial_modifier = spatial_modifier
         self.relational_modifier = relational_modifier
-        self.barlow_twins_lambda = barlow_twins_lambda
+        self.tau = tau
         self.huber_delta = huber_delta
         self.last_loss_components: dict[str, torch.Tensor] = {}
 
@@ -66,7 +66,7 @@ class ODSDLoss(torch.nn.Module):
             kd_modifier=self.kd_modifier,
             spatial_modifier=self.spatial_modifier,
             relational_modifier=self.relational_modifier,
-            barlow_twins_lambda=self.barlow_twins_lambda,
+            tau=self.tau,
             huber_delta=self.huber_delta,
         )
         self.last_loss_components = loss_dict

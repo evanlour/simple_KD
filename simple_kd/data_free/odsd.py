@@ -24,13 +24,11 @@ def odsd_train(
     kd_loss_modifier: float = 1.0,
     spatial_loss_modifier: float = 4.0,
     relational_loss_modifier: float = 4.0,
-    barlow_twins_lambda: float = 0.005,
+    tau: float = 0.5,
     huber_delta: float = 1.0,
-    print_frequency: int = 10,
+    print_frequency: int = 2,
     validation_frequency: int = 50,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
     clipper: SimpleGradClip | None = None,
     validation_metrics: dict | None = None,
     save_location: Path | None = None,
@@ -60,13 +58,11 @@ def odsd_train(
         kd_loss_modifier (float, optional): Multiplier for KD loss. Defaults to 1.0.
         spatial_loss_modifier (float, optional): Multiplier for spatial mapping loss. Defaults to 4.0.
         relational_loss_modifier (float, optional): Multiplier for Barlow Twins relational loss. Defaults to 4.0.
-        barlow_twins_lambda (float, optional): Lambda parameter for off-diagonal Barlow Twins terms. Defaults to 0.005.
+        tau (float, optional): Constrastive relational loss temperature. Defaults to 0.5.
         huber_delta (float, optional): Delta parameter for Huber loss in spatial mapping. Defaults to 1.0.
-        print_frequency (int, optional): Frequency (in epochs) to print progress to console. Defaults to 10.
+        print_frequency (int, optional): Frequency (in epochs) to print progress to console. Defaults to 2.
         validation_frequency (int, optional): Frequency (in epochs) to evaluate on validation metrics. Defaults to 50.
         scheduler (torch.optim.lr_scheduler.LRScheduler | None, optional): Learning rate scheduler for student. Defaults to None.
-        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Intermediate student activation hooks. Defaults to ().
-        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Intermediate teacher activation hooks. Defaults to ().
         clipper (SimpleGradClip | None, optional): Optional gradient clipping utility. Defaults to None.
         validation_metrics (dict | None, optional): Dict with validation images, labels, augs, and classes for evaluation.
         save_location (Path | None, optional): Directory where checkpoints and history CSV will be stored. Defaults to None.
@@ -88,7 +84,7 @@ def odsd_train(
         kd_modifier=kd_loss_modifier,
         spatial_modifier=spatial_loss_modifier,
         relational_modifier=relational_loss_modifier,
-        barlow_twins_lambda=barlow_twins_lambda,
+        tau=tau,
         huber_delta=huber_delta,
     ).to(accelerator.device)
 

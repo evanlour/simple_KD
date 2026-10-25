@@ -13,12 +13,12 @@ from simple_kd.training import evaluate_model
 from simple_kd.utils import LabelFreeDataset
 
 CLASSES = 100
-EPOCHS = 5
-BATCH = 256
+EPOCHS = 100
+BATCH = 128
 WORKERS = 2
 KMEANS_SIZE = 7
 KEEP_RATIO = 0.5
-SKIP_SAMPLING = False
+SKIP_SAMPLING = True
 
 EXTERNAL_IMAGES_LOCATION = "/mnt/storage/Datasets/stylegan/stylegan.npy"
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     student_optimizer = torch.optim.SGD(
         student_model.parameters(),
-        lr=1e-1,
+        lr=0.025,
         weight_decay=5e-4,
         momentum=0.9,
         nesterov=False,
@@ -148,15 +148,15 @@ if __name__ == "__main__":
         )
     )
 
-    #     student_model = torch.compile(student_model)
-    #     teacher_model = torch.compile(teacher_model)
+    student_model = torch.compile(student_model)
+    teacher_model = torch.compile(teacher_model)
 
     GPU_LOW_AUGS = GPU_LOW_AUGS.to(device)
     GPU_HIGH_AUGS = GPU_HIGH_AUGS.to(device)
 
     if not SKIP_SAMPLING:
         odsd_sample(
-            teacher_model=teacher_model,
+            teacher_model=teacher_model,  # type: ignore
             dataloader=external_loader,
             augmentations=GPU_LOW_AUGS,
             num_classes=CLASSES,
@@ -198,6 +198,9 @@ if __name__ == "__main__":
         train_loader=sampled_loader,
         student_optimizer=student_optimizer,
         epochs=EPOCHS,
+        spatial_loss_modifier=10.0,
+        relational_loss_modifier=0.5,
+        validation_frequency=5,
         augmentations=GPU_HIGH_AUGS,
         basic_augmentations=GPU_LOW_AUGS,
         scheduler=student_scheduler,
