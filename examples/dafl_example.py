@@ -13,8 +13,8 @@ from simple_kd.training import evaluate_model
 from simple_kd.utils import apply_hooks
 
 CLASSES = 100
-EPOCHS = 500
-BATCH = 256
+EPOCHS = 100
+BATCH = 512
 WORKERS = 2
 STEPS_PER_EPOCH = 120
 GENERATOR_LATENT_SIZE = 128
@@ -23,7 +23,9 @@ VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TEACHER_MODEL_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_test_results/model.pth"
+TEACHER_MODEL_LOCATION = (
+    "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
+)
 TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_dafl_results"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
@@ -77,7 +79,7 @@ if __name__ == "__main__":
 
     teacher_model = resnet34()
     teacher_model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     teacher_model.maxpool = torch.nn.Identity()  # type: ignore
     feats = teacher_model.fc.in_features
@@ -95,7 +97,7 @@ if __name__ == "__main__":
 
     student_model = resnet18()
     student_model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     student_model.maxpool = torch.nn.Identity()  # type: ignore
     student_feats = student_model.fc.in_features
@@ -108,16 +110,16 @@ if __name__ == "__main__":
         lr=1e-1,
         weight_decay=5e-4,
         momentum=0.9,
-        nesterov=False,
+        nesterov=True,
         fused=True,
     )
     student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        student_optimizer, T_max=EPOCHS, eta_min=2e-3
+        student_optimizer, T_max=EPOCHS, eta_min=1e-3
     )
     generator_optimizer = torch.optim.AdamW(
         image_generator.parameters(),
         lr=2e-3,
-        betas=(0.9, 0.999),
+        betas=(0.5, 0.999),
         weight_decay=0.05,
         fused=True,
     )
@@ -166,7 +168,9 @@ if __name__ == "__main__":
         epochs=EPOCHS,
         one_hot_gamma=1.0,
         feature_gamma=0.5,
-        info_entropy_gamma=20.0,
+        info_entropy_gamma=80.0,
+        print_frequency=5,
+        validation_frequency=15,
         generator_latent_size=GENERATOR_LATENT_SIZE,
         steps_per_epoch=STEPS_PER_EPOCH,
         scheduler=student_scheduler,

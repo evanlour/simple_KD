@@ -1,9 +1,11 @@
+# simple_kd
+
 [![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![Accelerate](https://img.shields.io/badge/accelerate-distributed-orange.svg)](https://huggingface.co/docs/accelerate/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-simple_KD is a library that combines non data free methods implemented by repositories such as mdistiller and the Knowledge Distillation Zoo as well as popular data free distillation methods and implements them with pytorch-style structure and calling. The library also uses the Hugging face
+simple_KD is a library that combines non data free methods implemented by repositories such as mdistiller and the Knowledge Distillation Zoo as well as popular data free distillation methods and implements them with pytorch-style structure and calling. The library also uses the Hugging Face
 accelerate library in order to support multiple GPUs.
 
 ---
@@ -20,7 +22,7 @@ accelerate library in order to support multiple GPUs.
   - [Data-Free Knowledge Distillation (DFKD)](#data-free-knowledge-distillation-dfkd)
   - [Synthetic Noise & Inductive Bias Generators](#synthetic-noise--inductive-bias-generators)
 - [Installation](#installation)
-- [Data & Hook Utilities](#data--hook-utilities-simple_kdutils)
+- [Data & Hook Utilities](#data--hook-utilities-simple_kd.utils)
 - [Included Examples](#included-examples)
 - [Performance Results](#performance-results)
 - [Testing & Quality Verification](#testing--quality-verification)
@@ -165,7 +167,11 @@ The [examples](./examples) directory provides turnkey scripts ready to run:
 
 ## Performance Results
 
-The following table summarizes the performance on CIFAR100 of various distillation methods implemented in `simple_kd`:
+The following table summarizes the performance on CIFAR100 of various distillation methods implemented in `simple_kd`. Some notes about the training:
+
+- For the Non Data Free methods the stock hyperparameters for each method were used. Train times were similar and around the 8 minute mark
+- For the Data Free methods, as there are a lot of variables, the hyperparameters used are hardcoded inside the examples. As Data free methods are usually time-intensive, i tried to keep a total train time of around an hour for each. I will attach more info for the methods below. For reference, my hardware consists of an Nvidia RTX3060 and 16GB or RAM
+-  I set the DAFL epochs to 100  instead of 2000 used in the original paper and used a more aggresive optimizer setup as well as a much higher info entropy loss (80 instead of 20) to prevent generator collapse
 
 | **Method**                       | **Accuracy** | **Loss** |  **F1 Score(macro)** |
 | :----------------                | :----------: | :------: | :------------------: |
@@ -180,9 +186,9 @@ The following table summarizes the performance on CIFAR100 of various distillati
 | **RKD Angle**                    |    56.31%    |   1.738  |         0.5575       |
 | **RKD Dist**                     |    54.15%    |   1.813  |         0.5348       |
 | **SP**                           |    54.47%    |   1.819  |         0.5394       |
-| **SSP**                          |    54.57     |   1.785  |         0.5390       |
+| **SSP**                          |    54.57%    |   1.785  |         0.5390       |
 | **Data free methods**            |
-| **DAFL**                         |     -        |    -     |         -            |
+| **DAFL**                         |    58.93%    |   1.522  |         0.5822       |
 | **DFAD**                         |     -        |    -     |         -            |
 | **Gaussian (Noise)**             |     -        |    -     |         -            |
 | **Gaussian (StyleGAN)**          |     -        |    -     |         -            |
@@ -234,7 +240,7 @@ This project builds upon the following repositories and methods. Thanks to their
 | **KD loss** | [Distilling the Knowledge in a Neural Network](https://arxiv.org/pdf/1503.02531) | - |
 | **Knowledge Distillation Zoo** | - | [https://github.com/AberHu/Knowledge-Distillation-Zoo](https://github.com/AberHu/Knowledge-Distillation-Zoo) |
 | **StyleGAN2-ADA** | [Training Generative Adversarial Networks with Limited Data](https://arxiv.org/pdf/2006.06676) | [https://github.com/nvlabs/stylegan2-ada-pytorch](https://github.com/nvlabs/stylegan2-ada-pytorch) |
-| **Synthetic Noise Datasets** | [Learning to See by Looking at Noise](https://arxiv.org/pdf/2106.05963)] | [https://github.com/mbaradad/learning_with_noise](https://github.com/mbaradad/learning_with_noise) |
+| **Synthetic Noise Datasets** | [Learning to See by Looking at Noise](https://arxiv.org/pdf/2106.05963) | [https://github.com/mbaradad/learning_with_noise](https://github.com/mbaradad/learning_with_noise) |
 | **mdistiller** | [DOT: A Distillation-Oriented Trainer](https://openaccess.thecvf.com/content/ICCV2023/papers/Zhao_DOT_A_Distillation-Oriented_Trainer_ICCV_2023_paper.pdf) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |
 | **ODSD** | [Sampling to Distill: Knowledge Transfer from Open-World Data](https://arxiv.org/pdf/2307.16601v2) | - |
 | **PKT loss** | [Learning Deep Representations with Probabilistic Knowledge Transfer](https://arxiv.org/pdf/1803.10837) | [https://github.com/passalis/probabilistic_kt](https://github.com/passalis/probabilistic_kt) |

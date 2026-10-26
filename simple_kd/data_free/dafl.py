@@ -130,6 +130,7 @@ def dafl_train(
 
         student_model.train()
         generator.train()
+        teacher_model.eval()
         for _ in range(steps_per_epoch):
             gen_imgs = images_from_generator(
                 generator,
@@ -189,11 +190,11 @@ def dafl_train(
         )
         gen_conf = accelerator.reduce(gen_conf, reduction="sum").item() / epoch_samples  # type: ignore
         gen_entropy = (
-            accelerator.reduce(gen_entropy, reduction="sum").item() / epoch_samples
-        )  # type: ignore
+            accelerator.reduce(gen_entropy, reduction="sum").item() / epoch_samples  # type: ignore
+        )
         gen_spread = (
-            accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples
-        )  # type: ignore
+            accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples  # type: ignore
+        )
 
         if scheduler is not None:
             scheduler.step()
