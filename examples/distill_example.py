@@ -171,7 +171,7 @@ if __name__ == "__main__":
     )
     student_model.maxpool = torch.nn.Identity()  # type: ignore
     student_feats = student_model.fc.in_features
-    student_model.fc = torch.nn.Linear(feats, CLASSES)
+    student_model.fc = torch.nn.Linear(student_feats, CLASSES)
 
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     distillation_criterion = DKDLoss()

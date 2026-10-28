@@ -34,11 +34,11 @@ def compute_generator_metrics(
     Returns:
         dict: A dictionary containing:
             - "gen_conf" (float): Mean maximum softmax probability across the batch, indicating
-              semantic fidelity / categorical sharpness (Ideal: > 0.70).
+              semantic fidelity / categorical sharpness
             - "gen_entropy" (float): Batch-level Shannon entropy normalized by log(num_classes),
-              measuring categorical diversity across classes (Ideal: 0.70 - 0.95).
+              measuring categorical diversity across classes
             - "gen_spread" (float): Spatial pixel standard deviation, ruling out flat gray or
-              checkerboard generator collapse (Ideal: > 0.15).
+              checkerboard generator collapse
     """
     with torch.no_grad():
         probs = torch.softmax(teacher_logits, dim=-1)
@@ -106,11 +106,10 @@ def train_model_with_generator(
     images: torch.Tensor,
     student_model: torch.nn.Module,
     teacher_model: torch.nn.Module,
-    generator: torch.nn.Module,
     criterion: torch.nn.Module,
     student_optimizer: torch.optim.Optimizer,
-    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] | None = (),
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] | None = (),
     clipper: SimpleGradClip | None = None,
 ) -> tuple[torch.Tensor, dict]:
     """Executes a single optimization step for the student model using generator images.
@@ -123,7 +122,6 @@ def train_model_with_generator(
         images (torch.Tensor): Synthetic images batch produced by the generator.
         student_model (torch.nn.Module): Student model being trained.
         teacher_model (torch.nn.Module): Pre-trained teacher model providing distillation targets.
-        generator (torch.nn.Module): Generator model (placed in eval mode).
         criterion (torch.nn.Module): Student distillation loss criterion (e.g. DFADLoss, KDLoss).
         student_optimizer (torch.optim.Optimizer): Optimizer for student model parameters.
         student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Student intermediate stage activations. Defaults to [].
@@ -136,8 +134,6 @@ def train_model_with_generator(
             - generator_statistics (dict): Dictionary of generator metrics (conf, entropy, spread).
     """
     train_loss = torch.tensor(0.0, device=accelerator.device)
-    generator.eval()
-    student_model.train()
     with accelerator.accumulate(student_model):
         student_output = student_model(images)
         with torch.no_grad():
@@ -173,8 +169,8 @@ def train_generator(
     generator: torch.nn.Module,
     criterion: torch.nn.Module,
     generator_optimizer: torch.optim.Optimizer,
-    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
+    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] | None = (),
+    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] | None = (),
     clipper: SimpleGradClip | None = None,
 ) -> torch.Tensor:
     """Executes a single optimization step for the generator.
@@ -185,7 +181,7 @@ def train_generator(
     Args:
         accelerator (Accelerator): The HuggingFace Accelerator instance.
         images (torch.Tensor): Synthetic images with requires_grad=True connected to the generator.
-        student_model (torch.nn.Module): Student model (placed in eval mode).
+        student_model (torch.nn.Module): Student model.
         teacher_model (torch.nn.Module): Pre-trained teacher model.
         generator (torch.nn.Module): Generator model being optimized.
         criterion (torch.nn.Module): Generator loss criterion (e.g. inverted DFADLoss).
@@ -198,8 +194,6 @@ def train_generator(
         torch.Tensor: The scalar generator loss tensor.
     """
     train_loss = torch.tensor(0.0, device=accelerator.device)
-    generator.train()
-    student_model.eval()
     with accelerator.accumulate(generator):
         student_output = student_model(images)
         with torch.no_grad():

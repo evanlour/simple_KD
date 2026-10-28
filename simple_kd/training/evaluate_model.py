@@ -22,6 +22,7 @@ def evaluate_model(
     classes: int = 1000,
     save_folder: Path | None = None,
     save_prefix: str = "",
+    train_batchnorms: bool = False,
 ) -> dict:
     """Tests and evaluates a model on a dataset, computing classification metrics, confusion matrices, and predictions.
 
@@ -36,6 +37,7 @@ def evaluate_model(
         classes (int, optional): The number of classes to evaluate. If lower than dataset class count, samples with labels >= classes are filtered out. Defaults to 1000.
         save_folder (Path, optional): Directory path where evaluation artifacts (metrics JSON, confusion matrix PNG, and predictions Parquet) are saved. Defaults to None.
         save_prefix (str, optional): Optional prefix prepended to saved evaluation files. Defaults to "".
+        train_batchnorms(bool, optional): Specific toggle to keep batch norm training during evaluation. Defaults to false, usually only the gaussian distillation method needs this to be true.
 
     Returns:
         dict: A dictionary containing evaluation metrics:
@@ -80,6 +82,13 @@ def evaluate_model(
     test_loss = 0.0
     test_correct = 0
     test_total = 0
+
+    if train_batchnorms:
+        is_student = any(p.requires_grad for p in model.parameters())
+        if is_student:
+            for module in model.modules():
+                if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+                    module.train()
 
     with torch.no_grad():
         for batch in test_loader:

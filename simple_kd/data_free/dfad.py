@@ -31,8 +31,6 @@ def dfad_train(
     validation_frequency: int = 50,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
     generator_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-    student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
-    teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...] = (),
     clipper: SimpleGradClip | None = None,
     validation_metrics: dict | None = None,
     save_location: Path | None = None,
@@ -71,8 +69,6 @@ def dfad_train(
         validation_frequency (int, optional): Frequency (in epochs) to evaluate on validation metrics. Defaults to 50.
         scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for student. Defaults to None.
         generator_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for generator. Defaults to None.
-        student_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Intermediate student activation hooks. Defaults to [].
-        teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...], optional): Intermediate teacher activation hooks. Defaults to [].
         clipper (SimpleGradClip, optional): Gradient clipping utility. Defaults to None.
         validation_metrics (dict, optional): Dictionary with validation images, labels, augs, and classes for periodic evaluation. Defaults to None.
         save_location (Path, optional): Directory where checkpoints and history CSV will be stored. Defaults to None.
@@ -114,6 +110,8 @@ def dfad_train(
         gen_conf = torch.tensor(0.0, device=accelerator.device)
         gen_entropy = torch.tensor(0.0, device=accelerator.device)
         gen_spread = torch.tensor(0.0, device=accelerator.device)
+        generator.train()
+        student_model.train()
 
         train_total = torch.tensor(0, device=accelerator.device)
         start_time = time.perf_counter()
@@ -124,17 +122,16 @@ def dfad_train(
                 accelerator.device,
                 batch_size,
                 generator_latent_size,
-            )
+            ).detach()
             train_loss, gen_statistics = train_model_with_generator(
                 accelerator,
                 gen_imgs,
                 student_model,
                 teacher_model,
-                generator,
                 criterion,
                 student_optimizer,
-                student_stages=student_stages,
-                teacher_stages=teacher_stages,
+                student_stages=None,
+                teacher_stages=None,
                 clipper=clipper,
             )
             total_train_loss += train_loss.detach() * batch_size  # type: ignore
@@ -148,11 +145,11 @@ def dfad_train(
         model_epoch_loss = model_epoch_loss / epoch_samples
         gen_conf = accelerator.reduce(gen_conf, reduction="sum").item() / epoch_samples  # type: ignore
         gen_entropy = (
-            accelerator.reduce(gen_entropy, reduction="sum").item() / epoch_samples
-        )  # type: ignore
+            accelerator.reduce(gen_entropy, reduction="sum").item() / epoch_samples  # type: ignore
+        )
         gen_spread = (
-            accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples
-        )  # type: ignore
+            accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples  # type: ignore
+        )
 
         gen_imgs = images_from_generator(
             generator,
@@ -161,7 +158,7 @@ def dfad_train(
             batch_size,
             generator_latent_size,
             requires_grad=True,
-        )
+        ).detach()
         gen_loss = train_generator(
             accelerator,
             gen_imgs,
@@ -170,8 +167,8 @@ def dfad_train(
             generator,
             generator_criterion,
             generator_optimizer,
-            student_stages=student_stages,
-            teacher_stages=teacher_stages,
+            student_stages=None,
+            teacher_stages=None,
             clipper=clipper,
         )
 

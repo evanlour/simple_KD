@@ -86,6 +86,7 @@ def gaussian_train(
 
     for epoch in range(epochs):
         student_model.train()
+        teacher_model.train()
         total_train_loss = torch.tensor(0.0, device=accelerator.device)
         train_total = torch.tensor(0, device=accelerator.device)
         start_time = time.perf_counter()
@@ -117,7 +118,7 @@ def gaussian_train(
         else:
             for _ in range(steps_per_epoch):
                 with accelerator.accumulate(student_model):
-                    z.uniform_()
+                    z.normal_()
                     if augmentations is not None:
                         z = augmentations(z)
                     student_output = student_model(z)
@@ -154,6 +155,7 @@ def gaussian_train(
                 print(temp_message)
 
             if epoch % validation_frequency == 0 and validation_metrics is not None:
+                student_model.eval()
                 _ = evaluate_model(
                     model=student_model,
                     images=validation_metrics["validation_images"],
@@ -164,6 +166,7 @@ def gaussian_train(
                     criterion=torch.nn.CrossEntropyLoss(),
                     classes=validation_metrics["classes"],
                     save_folder=None,
+                    train_batchnorms=True,
                 )
 
     accelerator.wait_for_everyone()

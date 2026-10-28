@@ -13,7 +13,7 @@ from simple_kd.training import evaluate_model
 from simple_kd.utils import LabelFreeDataset
 
 CLASSES = 100
-EPOCHS = 100
+EPOCHS = 200
 BATCH = 128
 WORKERS = 2
 KMEANS_SIZE = 7
@@ -25,7 +25,7 @@ VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TEACHER_MODEL_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_test_results/model.pth"
+TEACHER_MODEL_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
 TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_odsd_results"
 SAMPLED_IMAGES_PATH = Path(TARGET_SAVE_LOCATION) / "sampled_images.npy"
 
@@ -105,9 +105,9 @@ if __name__ == "__main__":
     teacher_model.conv1 = torch.nn.Conv2d(
         in_channels=3,
         out_channels=64,
-        kernel_size=5,
+        kernel_size=3,
         stride=1,
-        padding=2,
+        padding=1,
         bias=False,
     )
     teacher_model.maxpool = torch.nn.Identity()  # type: ignore
@@ -121,11 +121,11 @@ if __name__ == "__main__":
 
     student_model = resnet18()
     student_model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     student_model.maxpool = torch.nn.Identity()  # type: ignore
     student_feats = student_model.fc.in_features
-    student_model.fc = torch.nn.Linear(feats, CLASSES)
+    student_model.fc = torch.nn.Linear(student_feats, CLASSES)
 
     student_optimizer = torch.optim.SGD(
         student_model.parameters(),
@@ -198,7 +198,8 @@ if __name__ == "__main__":
         train_loader=sampled_loader,
         student_optimizer=student_optimizer,
         epochs=EPOCHS,
-        spatial_loss_modifier=10.0,
+        kd_loss_modifier=2.0,
+        spatial_loss_modifier=20.0,
         relational_loss_modifier=0.5,
         validation_frequency=5,
         augmentations=GPU_HIGH_AUGS,

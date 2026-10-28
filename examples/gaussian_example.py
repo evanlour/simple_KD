@@ -12,29 +12,28 @@ from simple_kd.training import evaluate_model
 from simple_kd.utils import LabelFreeDataset
 
 CLASSES = 100
-EPOCHS = 200
+EPOCHS = 200  # 200 epochs for StyleGAN, 400 for Gaussian Noise
 BATCH = 256
 WORKERS = 2
 STEPS_PER_EPOCH = 100
-USE_GAUSSIAN_NOISE = False
+USE_GAUSSIAN_NOISE = True
 
 SYNTHETIC_IMAGES_LOCATION = "/mnt/storage/Datasets/stylegan/stylegan.npy"
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TEACHER_MODEL_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_test_results/model.pth"
+TEACHER_MODEL_LOCATION = (
+    "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
+)
 TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_gaussian_results"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
 
 GPU_AUGS = v2.Compose(
     [
-        # v2.RandomHorizontalFlip(p=0.5),
-        # v2.RandAugment(num_ops=2, magnitude=9), # RandAugment is unsafe and crashes the generator!
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
-        # v2.RandomErasing(p=0.35, scale=(0.02, 0.2), ratio=(0.3, 3.3), value=0),
     ]
 )
 
@@ -96,7 +95,7 @@ if __name__ == "__main__":
 
     teacher_model = resnet34()
     teacher_model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     teacher_model.maxpool = torch.nn.Identity()  # type: ignore
     feats = teacher_model.fc.in_features
@@ -116,22 +115,22 @@ if __name__ == "__main__":
 
     student_model = resnet18()
     student_model.conv1 = torch.nn.Conv2d(
-        in_channels=3, out_channels=64, kernel_size=5, stride=1, padding=2, bias=False
+        in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
     )
     student_model.maxpool = torch.nn.Identity()  # type: ignore
     student_feats = student_model.fc.in_features
-    student_model.fc = torch.nn.Linear(feats, CLASSES)
+    student_model.fc = torch.nn.Linear(student_feats, CLASSES)
 
     student_optimizer = torch.optim.SGD(
         student_model.parameters(),
-        lr=1e-1,
+        lr=0.1,
         weight_decay=5e-4,
         momentum=0.9,
-        nesterov=False,
+        nesterov=True,
         fused=True,
     )
     student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        student_optimizer, T_max=EPOCHS, eta_min=2e-3
+        student_optimizer, T_max=EPOCHS, eta_min=1e-3
     )
 
     student_model = student_model.to(memory_format=torch.channels_last)  # type: ignore
@@ -157,11 +156,14 @@ if __name__ == "__main__":
         accelerator=accelerator,
         student_model=student_model,  # type: ignore
         teacher_model=teacher_model,  # type: ignore
-        augmentations=GPU_AUGS,
+        augmentations=None,  # type: ignore ,  Pure noise does not need augmentations, styleGAN needs GPU_AUGS
         batch_size=BATCH,
+        model_multipler=1.0,
         student_optimizer=student_optimizer,
         epochs=EPOCHS,
         synthetic_loader=synthetic_loader,
+        print_frequency=2,
+        validation_frequency=9,
         noise_shape=(3, 32, 32),
         steps_per_epoch=STEPS_PER_EPOCH,
         scheduler=student_scheduler,
@@ -183,7 +185,12 @@ if __name__ == "__main__":
         classes=CLASSES,
         save_folder=Path(TARGET_SAVE_LOCATION),
         save_prefix="student",
+        train_batchnorms=True,
     )
+
+    for module in teacher_model.modules():  # type: ignore
+        if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+            module.track_running_stats = True  # Restart the parameters
 
     print("Teacher model results")
     _ = evaluate_model(

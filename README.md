@@ -172,6 +172,8 @@ The following table summarizes the performance on CIFAR100 of various distillati
 - For the Non Data Free methods the stock hyperparameters for each method were used. Train times were similar and around the 8 minute mark
 - For the Data Free methods, as there are a lot of variables, the hyperparameters used are hardcoded inside the examples. As Data free methods are usually time-intensive, i tried to keep a total train time of around an hour for each. I will attach more info for the methods below. For reference, my hardware consists of an Nvidia RTX3060 and 16GB or RAM
 -  I set the DAFL epochs to 100  instead of 2000 used in the original paper and used a more aggresive optimizer setup as well as a much higher info entropy loss (80 instead of 20) to prevent generator collapse
+- For the gaussian distillation 50K images of StyleGAN seems to not be enough as training goes almost immediately to 40+% and then very slowly increases. A test with more images and/or combined synthetic noise must be tested (TODO)
+- The same goes for the ODSD method, more images with more variance might be needed(TODO).
 
 | **Method**                       | **Accuracy** | **Loss** |  **F1 Score(macro)** |
 | :----------------                | :----------: | :------: | :------------------: |
@@ -189,10 +191,10 @@ The following table summarizes the performance on CIFAR100 of various distillati
 | **SSP**                          |    54.57%    |   1.785  |         0.5390       |
 | **Data free methods**            |
 | **DAFL**                         |    58.93%    |   1.522  |         0.5822       |
-| **DFAD**                         |     -        |    -     |         -            |
-| **Gaussian (Noise)**             |     -        |    -     |         -            |
-| **Gaussian (StyleGAN)**          |     -        |    -     |         -            |
-| **ODSD (50% StyleGAN)**          |     -        |    -     |         -            |
+| **DFAD**                         |    13.49%    |   4.629  |         0.1012       |
+| **Gaussian (Noise)**             |    62.64%    |   1.851  |         0.6192       |
+| **Gaussian (StyleGAN)**          |    49.15%    |   2.257  |         0.4804       |
+| **ODSD (50% StyleGAN)**          |    26.96%    |   3.048  |         0.2320       |
 | **ZSKT**                         |     -        |    -     |         -            |
 
 All the common hyperparameters between the methods such as the optimizer, the scheduler, the batch size etc for the non data free methods are the same. The data free methods vary a lot, so each method needs its own tuning.
