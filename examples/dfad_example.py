@@ -32,7 +32,9 @@ CPU_AUGS = v2.Compose([v2.ToImage()])
 GPU_AUGS = v2.Compose(
     [
         # v2.RandAugment(num_ops=2, magnitude=9), # RandAugment is unsafe and crashes the generator!
-        v2.ToDtype(torch.float32, scale=True), # Normalization here damages the training
+        v2.ToDtype(
+            torch.float32, scale=True
+        ),  # Normalization here damages the training
     ]
 )
 

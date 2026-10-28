@@ -25,7 +25,9 @@ VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TEACHER_MODEL_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
+TEACHER_MODEL_LOCATION = (
+    "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
+)
 TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_odsd_results"
 SAMPLED_IMAGES_PATH = Path(TARGET_SAVE_LOCATION) / "sampled_images.npy"
 
