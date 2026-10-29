@@ -65,10 +65,11 @@ accelerate library in order to support multiple GPUs.
 ### Feature & Attention-Based Distillation
 | Method | Class | Functional | Key Idea |
 | :--- | :--- | :--- | :--- |
-| **AT** | `ATLoss` | `at_loss` | Attention map matching between the teacher and the student models |
-| **CC** | `CCLoss` | `cc_loss` | Attempts to improve correlation between the teacher and the student |
-| **SP** | `SPLoss` | `sp_loss` | Attempts to match the teacher and student representation space by keeping similar pairwise similarities |
-| **SSP** | `SSPLoss` | `ssp_loss` | Based on the [fitnets](https://arxiv.org/pdf/1412.6550) approach. Passes the stages through spatial pooling and then directly matches the teacher and student features | Custom |
+| **AT**     | `ATLoss`     | `at_loss` | Attention map matching between the teacher and the student models |
+| **CC**     | `CCLoss`     | `cc_loss` | Attempts to improve correlation between the teacher and the student |
+| **KD_SVD** | `KD_SVDLoss` | `cc_loss` | Uses SVD on intermediate layers of the student in order to extract information |
+| **SP**     | `SPLoss`     | `sp_loss` | Attempts to match the teacher and student representation space by keeping similar pairwise similarities |
+| **SSP**    | `SSPLoss`    | `ssp_loss` | Based on the [fitnets](https://arxiv.org/pdf/1412.6550) approach. Passes the stages through spatial pooling and then directly matches the teacher and student features | Custom |
 
 ### Relational Distillation
 | Method | Class | Functional | Key Idea |
@@ -188,6 +189,7 @@ The following table summarizes the performance on CIFAR100 of various distillati
 | **CC**                           |    52.83%    |   1.862  |         0.5227       |
 | **DKD**                          |    67.05%    |   1.321  |         0.6669       |
 | **KD**                           |    60.18%    |   1.611  |         0.5968       |
+| **KD_SVD**                       |    51.74%    |   1.816  |         0.5081       |
 | **NST**                          |    58.97%    |   1.524  |         0.5812       |
 | **PKT**                          |    53.28%    |   1.863  |         0.5270       |
 | **RKD Angle**                    |    56.31%    |   1.738  |         0.5575       |
@@ -246,6 +248,7 @@ This project builds upon the following repositories and methods. Thanks to their
 | **Feature Vis tools** | - | [Lucent](https://github.com/greentfrapp/lucent), [Lucid](https://github.com/tensorflow/lucid) |
 | **Gaussian** | [Discovering and Overcoming Limitations of Noise-engineered Data-free Knowledge Distillation](https://proceedings.neurips.cc/paper_files/paper/2022/file/1f96b24df4b06f5d68389845a9a13ed9-Paper-Conference.pdf) | [https://github.com/Piyush-555/GaussianDistillation](https://github.com/Piyush-555/GaussianDistillation) |
 | **KD loss** | [Distilling the Knowledge in a Neural Network](https://arxiv.org/pdf/1503.02531) | - |
+| **KD SVD loss** | [Self-supervised Knowledge Distillation Using Singular Value Decomposition](https://arxiv.org/pdf/1807.06819) | [https://github.com/sseung0703/SSKD_SVD](https://github.com/sseung0703/SSKD_SVD) |
 | **Knowledge Distillation Zoo** | - | [https://github.com/AberHu/Knowledge-Distillation-Zoo](https://github.com/AberHu/Knowledge-Distillation-Zoo) |
 | **NST loss** | [Like What You Like: Knowledge Distill via Neuron Selectivity Transfer](https://arxiv.org/pdf/1707.01219) | - |
 | **StyleGAN2-ADA** | [Training Generative Adversarial Networks with Limited Data](https://arxiv.org/pdf/2006.06676) | [https://github.com/nvlabs/stylegan2-ada-pytorch](https://github.com/nvlabs/stylegan2-ada-pytorch) |

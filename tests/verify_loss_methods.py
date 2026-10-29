@@ -10,6 +10,7 @@ from simple_kd.losses.functional import (
     cc_loss,
     dkd_loss,
     kd_loss,
+    kd_svd_loss,
     nst_loss,
     pkt_loss,
     rkd_angle_loss,
@@ -31,6 +32,7 @@ KD_FUNCTIONS = {
     "SP": sp_loss,
     "Skeptical": skeptical_loss,
     "NST": nst_loss,
+    "KD_SVD": kd_svd_loss,
 }
 
 KD_CONFIGS = {
@@ -70,6 +72,13 @@ KD_CONFIGS = {
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
         "gamma": 1.0,
         "p_order": 2,
+    },
+    "KD_SVD": {
+        "stage_percentages": (0.3, 0.3, 0.2, 0.2),
+        "gamma": 1.0,
+        "rank": 3,
+        "rank_extras": 3,
+        "rbf_sigma": 8.0,
     },
 }
 
@@ -266,10 +275,12 @@ if __name__ == "__main__":
     dummy_student = torch.randn(64, 64, requires_grad=True, device=device)
     dummy_teacher = torch.randn(64, 64, requires_grad=True, device=device)
     dummy_inter_student = [
-        torch.randn(64, 64, 32, 32, requires_grad=True, device=device)
+        torch.randn(64, 64, 32, 32, requires_grad=True, device=device),
+        torch.randn(64, 32, 16, 16, requires_grad=True, device=device),
     ]
     dummy_inter_teacher = [
-        torch.randn(64, 128, 16, 16, requires_grad=True, device=device)
+        torch.randn(64, 128, 16, 16, requires_grad=True, device=device),
+        torch.randn(64, 64, 32, 32, requires_grad=True, device=device),
     ]
     dummy_images = torch.randn(64, 3, 128, 128, device=device)
     dummy_labels = torch.randint(low=0, high=63, size=(64,), device=device)

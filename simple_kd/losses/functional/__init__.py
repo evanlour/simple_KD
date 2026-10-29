@@ -2,6 +2,7 @@ from .at_loss import at_loss
 from .cc_loss import cc_loss
 from .dkd_loss import dkd_loss
 from .kd_loss import kd_loss
+from .kd_svd_loss import kd_svd_loss
 from .nst_loss import nst_loss
 from .pkt_loss import pkt_loss
 from .rkd_loss import rkd_angle_loss, rkd_dist_loss
@@ -14,6 +15,7 @@ __all__ = [
     "cc_loss",
     "dkd_loss",
     "kd_loss",
+    "kd_svd_loss",
     "nst_loss",
     "pkt_loss",
     "rkd_angle_loss",
