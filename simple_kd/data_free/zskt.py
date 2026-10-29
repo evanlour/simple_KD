@@ -176,7 +176,7 @@ def zskt_train(
                 accelerator.device,
                 batch_size,
                 generator_latent_size,
-                requires_grad=True
+                requires_grad=True,
             )
             train_loss, gen_statistics = train_model_with_generator(
                 accelerator,

@@ -66,12 +66,14 @@ accelerate library in order to support multiple GPUs.
 | Method | Class | Functional | Key Idea |
 | :--- | :--- | :--- | :--- |
 | **AT** | `ATLoss` | `at_loss` | Attention map matching between the teacher and the student models |
+| **CC** | `CCLoss` | `cc_loss` | Attempts to improve correlation between the teacher and the student |
 | **SP** | `SPLoss` | `sp_loss` | Attempts to match the teacher and student representation space by keeping similar pairwise similarities |
 | **SSP** | `SSPLoss` | `ssp_loss` | Based on the [fitnets](https://arxiv.org/pdf/1412.6550) approach. Passes the stages through spatial pooling and then directly matches the teacher and student features | Custom |
 
 ### Relational Distillation
 | Method | Class | Functional | Key Idea |
 | :--- | :--- | :--- | :--- |
+| **NST**| `NSTLoss`| `nst_loss`| Student mimics neuron co-activations from the teacher. |
 | **RKD-Dist** | `RKDDistLoss` | `rkd_distance_loss` | Attempts to match the representation space of the teacher through the distance of couples |
 | **RKD-Angle** | `RKDAngleLoss` | `rkd_angle_loss` | Attempts to match the representation space of the teacher via the angle formed by a triplet of samples |
 | **PKT** | `PKTLoss` | `pkt_loss` | Distills through the representation space rather than the final predictions |
@@ -183,6 +185,7 @@ The following table summarizes the performance on CIFAR100 of various distillati
 | **Student with low data**        |    52.26%    |   1.926  |         0.5172       |
 | **Non Data free methods**        | 
 | **AT**                           |    57.01%    |   1.694  |         0.5639       |
+| **CC**                           |    52.83%    |   1.862  |         0.5227       |
 | **DKD**                          |    67.05%    |   1.321  |         0.6669       |
 | **KD**                           |    60.18%    |   1.611  |         0.5968       |
 | **NST**                          |    58.97%    |   1.524  |         0.5812       |
@@ -235,6 +238,7 @@ This project builds upon the following repositories and methods. Thanks to their
 | :--- | :--- | :--- |
 | **AGC (Adaptive Gradient Clipping)** | [High-Performance Large-Scale Image Recognition Without Normalization](https://arxiv.org/pdf/2102.06171) | [https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py](https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py) |
 | **AT loss** | [PAYING MORE ATTENTION TO ATTENTION:IMPROVING THE PERFORMANCE OF CONVOLUTIONAL NEURAL NETWORKS VIA ATTENTION TRANSFER](https://arxiv.org/pdf/1612.03928) | [https://github.com/szagoruyko/attention-transfer](https://github.com/szagoruyko/attention-transfer) |
+| **CC loss** | [Correlation Congruence for Knowledge Distillation](https://openaccess.thecvf.com/content_ICCV_2019/papers/Peng_Correlation_Congruence_for_Knowledge_Distillation_ICCV_2019_paper.pdf) | - |
 | **DAFL** | [Data-Free Learning of Student Networks](https://arxiv.org/pdf/1904.01186) | [https://github.com/autogyro/DAFL](https://github.com/autogyro/DAFL) |
 | **DFAD** | [Data-Free Adversarial Distillation](https://arxiv.org/pdf/1912.11006) | [https://github.com/VainF/Data-Free-Adversarial-Distillation](https://github.com/VainF/Data-Free-Adversarial-Distillation) |
 | **DKD loss** | [Decoupled Knowledge Distillation](https://arxiv.org/pdf/2203.08679) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |

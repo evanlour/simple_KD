@@ -7,6 +7,7 @@ from torch.utils import benchmark
 from simple_kd.losses import SkepticalClassifier
 from simple_kd.losses.functional import (
     at_loss,
+    cc_loss,
     dkd_loss,
     kd_loss,
     nst_loss,
@@ -20,6 +21,7 @@ from simple_kd.losses.functional import (
 
 KD_FUNCTIONS = {
     "KD": kd_loss,
+    "CC": cc_loss,
     "DKD": dkd_loss,
     "PKT": pkt_loss,
     "SSP": ssp_loss,
@@ -63,6 +65,11 @@ KD_CONFIGS = {
     "NST": {
         "stage_percentages": (0.3, 0.3, 0.2, 0.2),
         "gamma": 128.0,
+    },
+    "CC": {
+        "stage_percentages": (0.3, 0.3, 0.2, 0.2),
+        "gamma": 1.0,
+        "p_order": 2,
     },
 }
 

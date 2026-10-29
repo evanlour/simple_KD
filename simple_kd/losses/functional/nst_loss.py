@@ -6,7 +6,7 @@ def nst_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.3, 0.6),
-    gamma:float = 256.0,
+    gamma: float = 256.0,
 ) -> torch.Tensor:
     """Computes the Neuron Selectivity Transfer (NST) loss.
 
@@ -29,14 +29,20 @@ def nst_loss(
     """
     loss = 0.0
 
-    for student_stage, teacher_stage, stage_percentage in zip(student_stages, teacher_stages, stage_percentages):
+    for student_stage, teacher_stage, stage_percentage in zip(
+        student_stages, teacher_stages, stage_percentages
+    ):
         if teacher_stage.shape[2:] != student_stage.shape[2:]:
             student_stage = F.interpolate(
                 student_stage, size=teacher_stage.shape[2:], mode="bilinear"
             )
 
-        student_map = student_stage.view(student_stage.size(0), student_stage.size(1), -1)
-        teacher_map = teacher_stage.view(teacher_stage.size(0), teacher_stage.size(1), -1)
+        student_map = student_stage.view(
+            student_stage.size(0), student_stage.size(1), -1
+        )
+        teacher_map = teacher_stage.view(
+            teacher_stage.size(0), teacher_stage.size(1), -1
+        )
 
         student_map = F.normalize(student_map, dim=2)
         teacher_map = F.normalize(teacher_map, dim=2)
@@ -49,7 +55,7 @@ def nst_loss(
         )
         loss += stage_loss * stage_percentage
 
-    return loss * gamma # type: ignore
+    return loss * gamma  # type: ignore
 
 
 def _poly_kernel(feat1: torch.Tensor, feat2: torch.Tensor) -> torch.Tensor:

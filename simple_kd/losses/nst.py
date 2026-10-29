@@ -43,5 +43,5 @@ class NSTLoss(torch.nn.Module):
             student_stages=student_stages,
             teacher_stages=teacher_stages,
             stage_percentages=self.stage_percentages,
-            gamma=self.gamma
+            gamma=self.gamma,
         )
