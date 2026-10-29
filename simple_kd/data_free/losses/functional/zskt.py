@@ -11,7 +11,7 @@ def zskt_loss(
     T: float = 4.0,
     kd_gamma: float = 1.0,
     at_gamma: float = 128.0,
-    stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+    stage_percentages: list[float] | tuple[float, ...] = (0.1, 0.1, 0.3, 0.6),
 ) -> torch.Tensor:
     """Computes the Zero-Shot Knowledge Transfer (ZSKT) loss.
 
@@ -32,7 +32,7 @@ def zskt_loss(
         kd_gamma (float, optional): Multiplier for the KD loss. Defaults to 1.0.
         at_gamma (float, optional): Multiplier for the Attention Transfer loss. Defaults to 128.0.
         stage_percentages (list[float] | tuple[float], optional): Per-stage weights for AT loss.
-            Defaults to (0.25, 0.25, 0.25, 0.25).
+            Defaults to (0.1, 0.1, 0.3, 0.6).
 
     Returns:
         torch.Tensor: Combined scalar distillation loss.

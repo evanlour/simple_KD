@@ -9,6 +9,7 @@ from simple_kd.losses.functional import (
     at_loss,
     dkd_loss,
     kd_loss,
+    nst_loss,
     pkt_loss,
     rkd_angle_loss,
     rkd_dist_loss,
@@ -27,6 +28,7 @@ KD_FUNCTIONS = {
     "RKDDist": rkd_dist_loss,
     "SP": sp_loss,
     "Skeptical": skeptical_loss,
+    "NST": nst_loss,
 }
 
 KD_CONFIGS = {
@@ -58,6 +60,10 @@ KD_CONFIGS = {
         "gamma": 128.0,
     },
     "Skeptical": {"T": 4.0, "kd_gamma": 1.0, "in_kd_gamma": 1.0},
+    "NST": {
+        "stage_percentages": (0.3, 0.3, 0.2, 0.2),
+        "gamma": 128.0,
+    },
 }
 
 

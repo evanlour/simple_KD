@@ -1,6 +1,7 @@
 from .at import ATLoss
 from .dkd import DKDLoss
 from .kd import KDLoss
+from .nst import NSTLoss
 from .pkt import PKTLoss
 from .rkd import RKDAngleLoss, RKDDistLoss
 from .skeptical import SkepticalClassifier, SkepticalLoss
@@ -11,6 +12,7 @@ __all__ = [
     "ATLoss",
     "DKDLoss",
     "KDLoss",
+    "NSTLoss",
     "PKTLoss",
     "RKDAngleLoss",
     "RKDDistLoss",

@@ -30,8 +30,7 @@ def zskt_train(
     model_multipler: float = 1.0,
     generator_multiplier: float = 1.0,
     model_at_gamma: float = 0.0,
-    generator_at_gamma: float = 0.0,
-    stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+    stage_percentages: list[float] | tuple[float, ...] = (0.1, 0.1, 0.3, 0.6),
     validation_frequency: int = 50,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
     generator_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
@@ -77,9 +76,8 @@ def zskt_train(
         model_multipler (float, optional): Multiplier/gamma for the student KD loss. Defaults to 1.0.
         generator_multiplier (float, optional): Multiplier/gamma for the generator KD loss. Defaults to 1.0.
         model_at_gamma (float, optional): Multiplier/gamma for the student AT loss (beta in the paper). Defaults to 128.0.
-        generator_at_gamma (float, optional): Multiplier/gamma for the generator AT loss. Defaults to 0.0 (paper setting).
         stage_percentages (list[float] | tuple[float, ...], optional): Per-stage weights for the AT loss.
-            Must match the number of stages. Defaults to (0.25, 0.25, 0.25, 0.25).
+            Must match the number of stages. Defaults to (0.1, 0.1, 0.3, 0.6).
         validation_frequency (int, optional): Frequency (in epochs) to evaluate on validation metrics. Defaults to 50.
         scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for student. Defaults to None.
         generator_scheduler (torch.optim.lr_scheduler.LRScheduler, optional): Learning rate scheduler for generator. Defaults to None.
@@ -114,7 +112,7 @@ def zskt_train(
     generator_criterion = ZSKTLoss(
         T=temperature,
         kd_gamma=generator_multiplier,
-        at_gamma=generator_at_gamma,
+        at_gamma=0.0,
         stage_percentages=stage_percentages,
         sign=-1.0,
     ).to(accelerator.device)
@@ -141,6 +139,8 @@ def zskt_train(
         start_time = time.perf_counter()
 
         # Generator phase
+        generator.train()
+        student_model.train()
         for _ in range(generator_steps):
             gen_imgs = images_from_generator(
                 generator,
@@ -164,8 +164,11 @@ def zskt_train(
             )
             total_gen_loss += gen_loss.detach() * batch_size
             generator_train_total += batch_size
+            # print(gen_loss)
 
         # Student phase: minimize KD + AT discrepancy
+        generator.train()
+        student_model.train()
         for _ in range(model_steps):
             gen_imgs = images_from_generator(
                 generator,
@@ -173,19 +176,20 @@ def zskt_train(
                 accelerator.device,
                 batch_size,
                 generator_latent_size,
+                requires_grad=True
             )
             train_loss, gen_statistics = train_model_with_generator(
                 accelerator,
                 gen_imgs,
                 student_model,
                 teacher_model,
-                generator,
                 criterion,
                 student_optimizer,
                 student_stages=student_stages,
                 teacher_stages=teacher_stages,
                 clipper=clipper,
             )
+            # print(train_loss)
             total_train_loss += train_loss.detach() * batch_size  # type: ignore
             model_train_total += batch_size
             gen_conf += gen_statistics["gen_conf"] * batch_size
@@ -202,19 +206,19 @@ def zskt_train(
             accelerator.reduce(total_train_loss, reduction="sum") / model_epoch_samples
         )
         gen_epoch_loss = (
-            accelerator.reduce(total_gen_loss, reduction="mean")
+            accelerator.reduce(total_gen_loss, reduction="sum")
             / generator_epoch_samples
         )
         gen_conf = (
-            accelerator.reduce(gen_conf, reduction="sum").item() / model_epoch_samples
-        )  # type: ignore
+            accelerator.reduce(gen_conf, reduction="sum").item() / model_epoch_samples  # type: ignore
+        )
         gen_entropy = (
-            accelerator.reduce(gen_entropy, reduction="sum").item()
+            accelerator.reduce(gen_entropy, reduction="sum").item()  # type: ignore
             / model_epoch_samples
-        )  # type: ignore
+        )
         gen_spread = (
-            accelerator.reduce(gen_spread, reduction="sum").item() / model_epoch_samples
-        )  # type: ignore
+            accelerator.reduce(gen_spread, reduction="sum").item() / model_epoch_samples  # type: ignore
+        )
 
         if scheduler is not None:
             scheduler.step()

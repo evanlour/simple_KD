@@ -174,6 +174,7 @@ The following table summarizes the performance on CIFAR100 of various distillati
 -  I set the DAFL epochs to 100  instead of 2000 used in the original paper and used a more aggresive optimizer setup as well as a much higher info entropy loss (80 instead of 20) to prevent generator collapse
 - For the gaussian distillation 50K images of StyleGAN seems to not be enough as training goes almost immediately to 40+% and then very slowly increases. A test with more images and/or combined synthetic noise must be tested (TODO)
 - The same goes for the ODSD method, more images with more variance might be needed(TODO).
+- ZSKT method currently does not work, it needs further testing on why that is (TODO).
 
 | **Method**                       | **Accuracy** | **Loss** |  **F1 Score(macro)** |
 | :----------------                | :----------: | :------: | :------------------: |
@@ -184,6 +185,7 @@ The following table summarizes the performance on CIFAR100 of various distillati
 | **AT**                           |    57.01%    |   1.694  |         0.5639       |
 | **DKD**                          |    67.05%    |   1.321  |         0.6669       |
 | **KD**                           |    60.18%    |   1.611  |         0.5968       |
+| **NST**                          |    58.97%    |   1.524  |         0.5812       |
 | **PKT**                          |    53.28%    |   1.863  |         0.5270       |
 | **RKD Angle**                    |    56.31%    |   1.738  |         0.5575       |
 | **RKD Dist**                     |    54.15%    |   1.813  |         0.5348       |
@@ -241,6 +243,7 @@ This project builds upon the following repositories and methods. Thanks to their
 | **Gaussian** | [Discovering and Overcoming Limitations of Noise-engineered Data-free Knowledge Distillation](https://proceedings.neurips.cc/paper_files/paper/2022/file/1f96b24df4b06f5d68389845a9a13ed9-Paper-Conference.pdf) | [https://github.com/Piyush-555/GaussianDistillation](https://github.com/Piyush-555/GaussianDistillation) |
 | **KD loss** | [Distilling the Knowledge in a Neural Network](https://arxiv.org/pdf/1503.02531) | - |
 | **Knowledge Distillation Zoo** | - | [https://github.com/AberHu/Knowledge-Distillation-Zoo](https://github.com/AberHu/Knowledge-Distillation-Zoo) |
+| **NST loss** | [Like What You Like: Knowledge Distill via Neuron Selectivity Transfer](https://arxiv.org/pdf/1707.01219) | - |
 | **StyleGAN2-ADA** | [Training Generative Adversarial Networks with Limited Data](https://arxiv.org/pdf/2006.06676) | [https://github.com/nvlabs/stylegan2-ada-pytorch](https://github.com/nvlabs/stylegan2-ada-pytorch) |
 | **Synthetic Noise Datasets** | [Learning to See by Looking at Noise](https://arxiv.org/pdf/2106.05963) | [https://github.com/mbaradad/learning_with_noise](https://github.com/mbaradad/learning_with_noise) |
 | **mdistiller** | [DOT: A Distillation-Oriented Trainer](https://openaccess.thecvf.com/content/ICCV2023/papers/Zhao_DOT_A_Distillation-Oriented_Trainer_ICCV_2023_paper.pdf) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |
