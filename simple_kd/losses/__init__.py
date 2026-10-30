@@ -7,6 +7,7 @@ from .nst import NSTLoss
 from .pkt import PKTLoss
 from .rkd import RKDAngleLoss, RKDDistLoss
 from .skeptical import SkepticalClassifier, SkepticalLoss
+from .sobolev import SobolevLoss
 from .sp import SPLoss
 from .ssp import SSPLoss
 
@@ -24,4 +25,5 @@ __all__ = [
     "SSPLoss",
     "SkepticalClassifier",
     "SkepticalLoss",
+    "SobolevLoss",
 ]

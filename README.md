@@ -65,11 +65,12 @@ accelerate library in order to support multiple GPUs.
 ### Feature & Attention-Based Distillation
 | Method | Class | Functional | Key Idea |
 | :--- | :--- | :--- | :--- |
-| **AT**     | `ATLoss`     | `at_loss` | Attention map matching between the teacher and the student models |
-| **CC**     | `CCLoss`     | `cc_loss` | Attempts to improve correlation between the teacher and the student |
-| **KD_SVD** | `KD_SVDLoss` | `cc_loss` | Uses SVD on intermediate layers of the student in order to extract information |
-| **SP**     | `SPLoss`     | `sp_loss` | Attempts to match the teacher and student representation space by keeping similar pairwise similarities |
-| **SSP**    | `SSPLoss`    | `ssp_loss` | Based on the [fitnets](https://arxiv.org/pdf/1412.6550) approach. Passes the stages through spatial pooling and then directly matches the teacher and student features | Custom |
+| **AT**     | `ATLoss`     | `at_loss`     | Attention map matching between the teacher and the student models |
+| **CC**     | `CCLoss`     | `cc_loss`     | Attempts to improve correlation between the teacher and the student |
+| **KD_SVD** | `KD_SVDLoss` | `kd_svd_loss` | Uses SVD on intermediate layers of the student in order to extract information |
+| **Sobolev**| 'SobolevLoss | 'sobolev_loss'| Encodes additional information by incorporating target derivates along the target values |
+| **SP**     | `SPLoss`     | `sp_loss`     | Attempts to match the teacher and student representation space by keeping similar pairwise similarities |
+| **SSP**    | `SSPLoss`    | `ssp_loss`    | Based on the [fitnets](https://arxiv.org/pdf/1412.6550) approach. Passes the stages through spatial pooling and then directly matches the teacher and student features | Custom |
 
 ### Relational Distillation
 | Method | Class | Functional | Key Idea |
@@ -173,6 +174,9 @@ The [examples](./examples) directory provides turnkey scripts ready to run:
 The following table summarizes the performance on CIFAR100 of various distillation methods implemented in `simple_kd`. Some notes about the training:
 
 - For the Non Data Free methods the stock hyperparameters for each method were used. Train times were similar and around the 8 minute mark
+- For comparing non Data Free methods only 20% of the train data was used, simulating a reduced data scenario. Due to this the benchmark numbers might be drastically different than the ones mentioned on their original papers, with some methods vastly outperforming others due to the nature of the problem. Generally, almost all the methods showed increased performance compared to the baseline, even complimentary methods such as the CC loss.
+- For the KD SVD method there were several modifications needed due to the SVD solver, diverging significantly from the original implementation.
+- For the Sobolev method the default distillation pipeline will not work. In order for it to work ```inputs = inputs.requires_grad_(True)``` is needed before retrieving the outputs, as well as enabling grads for the teacher and disabling compiling the models. I do not implement options for all of these inside the current loop as i believe it will be made overly complex for the other existing methods. Training is also around 4x times slower.
 - For the Data Free methods, as there are a lot of variables, the hyperparameters used are hardcoded inside the examples. As Data free methods are usually time-intensive, i tried to keep a total train time of around an hour for each. I will attach more info for the methods below. For reference, my hardware consists of an Nvidia RTX3060 and 16GB or RAM
 -  I set the DAFL epochs to 100  instead of 2000 used in the original paper and used a more aggresive optimizer setup as well as a much higher info entropy loss (80 instead of 20) to prevent generator collapse
 - For the gaussian distillation 50K images of StyleGAN seems to not be enough as training goes almost immediately to 40+% and then very slowly increases. A test with more images and/or combined synthetic noise must be tested (TODO)
@@ -194,6 +198,7 @@ The following table summarizes the performance on CIFAR100 of various distillati
 | **PKT**                          |    53.28%    |   1.863  |         0.5270       |
 | **RKD Angle**                    |    56.31%    |   1.738  |         0.5575       |
 | **RKD Dist**                     |    54.15%    |   1.813  |         0.5348       |
+| **Sobolev**                      |    52.96%    |   1.847  |         0.5296       |
 | **SP**                           |    54.47%    |   1.819  |         0.5394       |
 | **SSP**                          |    54.57%    |   1.785  |         0.5390       |
 | **Data free methods**            |
@@ -258,6 +263,7 @@ This project builds upon the following repositories and methods. Thanks to their
 | **PKT loss** | [Learning Deep Representations with Probabilistic Knowledge Transfer](https://arxiv.org/pdf/1803.10837) | [https://github.com/passalis/probabilistic_kt](https://github.com/passalis/probabilistic_kt) |
 | **RKD (Angle, Dist) loss** | [Relational Knowledge Distillation](https://arxiv.org/pdf/1904.05068) | [https://github.com/lenscloth/RKD](https://github.com/lenscloth/RKD) |
 | **Skeptical loss** | [Analyzing the Confidentiality of Undistillable Teachers in Knowledge Distillation](https://openreview.net/pdf?id=Laz0L5tjml) | [https://github.com/ksouvik52/Skeptical2021](https://github.com/ksouvik52/Skeptical2021) |
+| **Sobolev loss** | [Sobolev Training for Neural Networks](https://arxiv.org/pdf/1706.04859) | - |
 | **SP loss** | [Similarity-Preserving Knowledge Distillation](https://arxiv.org/pdf/1907.09682) | [https://github.com/DongGeun-Yoon/SPKD](https://github.com/DongGeun-Yoon/SPKD) |
 | **SSP Loss** | (*Original method, based on*) [FITNETS: HINTS FOR THIN DEEP NETS](https://arxiv.org/pdf/1412.6550) | [https://github.com/adri-romsor/FitNets](https://github.com/adri-romsor/FitNets) |
 | **ZSKD** | [Zero-Shot Knowledge Distillation in Deep Networks](https://arxiv.org/pdf/1905.08114) | [https://github.com/vcl-iisc/ZSKD](https://github.com/vcl-iisc/ZSKD) |
