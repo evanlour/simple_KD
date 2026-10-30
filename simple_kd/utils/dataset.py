@@ -1,3 +1,4 @@
+import bisect
 from typing import Literal
 
 import numpy as np
@@ -102,3 +103,71 @@ class LabelFreeDataset(torch.utils.data.Dataset):
         if self.augmentations is not None:
             image = self.augmentations(image)
         return image
+
+
+class MultiPathLabelFreeDataset(torch.utils.data.Dataset):
+    """Memory-mapped PyTorch Dataset for loading NumPy (.npy) images from multiple paths.
+
+    Args:
+        images_paths (list[str]): List of filesystem paths to the images .npy files.
+        loading_mode (Literal['r+', 'r', 'w+', 'c'] | None, optional): Memory-map mode passed to np.load. Defaults to 'r'.
+        augmentations (torch.nn.Module | None, optional): On-fetch PyTorch data augmentations. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        images_paths: list[str],
+        loading_mode: Literal["r+", "r", "w+", "c"] | None = "r",
+        augmentations: torch.nn.Module | None = None,
+    ):
+        super().__init__()
+        if not images_paths:
+            raise ValueError("images_paths must contain at least one path")
+
+        self.images_paths = images_paths
+        self.loading_mode = loading_mode
+        self.augmentations = augmentations
+
+        # Load all arrays with memory mapping and compute cumulative lengths
+        self._arrays = []
+        self._cumulative_lengths = []
+        total = 0
+        for path in images_paths:
+            arr = np.load(path, mmap_mode=loading_mode)
+            self._arrays.append(arr)
+            total += len(arr)
+            self._cumulative_lengths.append(total)
+
+        self._total_length = total
+
+    def __len__(self) -> int:
+        """Returns the total number of samples across all files."""
+        return self._total_length
+
+    def __getitem__(self, index: int) -> torch.Tensor:
+        """Fetches a sample and returns the augmented image tensor."""
+        if index < 0:
+            index += self._total_length
+        if index < 0 or index >= self._total_length:
+            raise IndexError(
+                f"Index {index} out of range for dataset of length {self._total_length}"
+            )
+
+        # Find which file this index belongs to using binary search
+        file_idx = bisect.bisect_right(self._cumulative_lengths, index)
+        if file_idx == 0:
+            local_idx = index
+        else:
+            local_idx = index - self._cumulative_lengths[file_idx - 1]
+
+        image = self._arrays[file_idx][local_idx]
+
+        if self.augmentations is not None:
+            image = self.augmentations(image)
+
+        return image
+
+    @property
+    def images(self) -> np.ndarray:
+        """Concatenated view of all images across files (for compatibility with single-path datasets)."""
+        return np.concatenate(self._arrays)

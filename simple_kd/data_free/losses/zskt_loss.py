@@ -19,7 +19,7 @@ class ZSKTLoss(torch.nn.Module):
         T (float, optional): Distillation temperature for KD loss. Defaults to 4.0.
         kd_gamma (float, optional): Multiplier for the output KD loss. Defaults to 1.0.
         at_gamma (float, optional): Multiplier for the intermediate Attention Transfer loss. Defaults to 128.0.
-        stage_percentages (list[float] | tuple[float], optional): Per-stage weight fractions for AT loss. Defaults to [0.25, 0.25, 0.25, 0.25].
+        stage_percentages (list[float] | tuple[float], optional): Per-stage weight fractions for AT loss. Defaults to (0.1, 0.1, 0.3, 0.6).
         sign (float, optional): The sign and multiplier of the result (+1.0 for student, -1.0 for generator). Defaults to 1.0.
     """
 
@@ -28,7 +28,7 @@ class ZSKTLoss(torch.nn.Module):
         T: float = 4.0,
         kd_gamma: float = 1.0,
         at_gamma: float = 128.0,
-        stage_percentages: list[float] | tuple[float, ...] = (0.25, 0.25, 0.25, 0.25),
+        stage_percentages: list[float] | tuple[float, ...] = (0.1, 0.1, 0.3, 0.6),
         sign: float = 1.0,
     ):
         super().__init__()

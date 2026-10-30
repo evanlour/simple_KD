@@ -10,22 +10,29 @@ from torchvision.transforms import v2
 
 from simple_kd.data_free import odsd_sample, odsd_train
 from simple_kd.training import evaluate_model
-from simple_kd.utils import LabelFreeDataset
+from simple_kd.utils import LabelFreeDataset, MultiPathLabelFreeDataset
 
 CLASSES = 100
-EPOCHS = 200
+EPOCHS = 50
 BATCH = 128
 WORKERS = 2
 KMEANS_SIZE = 7
 KEEP_RATIO = 0.5
-SKIP_SAMPLING = True
+SKIP_SAMPLING = False
 
-EXTERNAL_IMAGES_LOCATION = "/mnt/storage/Datasets/stylegan/stylegan.npy"
+EXTERNAL_IMAGES_LOCATIONS = [
+    "/mnt/storage/Datasets/stylegan/stylegan.npy",
+    "/mnt/storage/Datasets/dead_leaves/dead_leaves.npy",
+    "/mnt/storage/Datasets/feature_vis/feature_vis.npy",
+    "/mnt/storage/Datasets/statistical/statistical.npy",
+]
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TEACHER_MODEL_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
+TEACHER_MODEL_LOCATION = (
+    "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
+)
 TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_odsd_results"
 SAMPLED_IMAGES_PATH = Path(TARGET_SAVE_LOCATION) / "sampled_images.npy"
 
@@ -82,8 +89,8 @@ if __name__ == "__main__":
     torch.backends.cuda.matmul.allow_tf32 = True  # Disable if unsupported
     torch.backends.cudnn.allow_tf32 = True  # Disable if unsupported
 
-    external_dataset = LabelFreeDataset(
-        images_path=EXTERNAL_IMAGES_LOCATION, augmentations=CPU_AUGS, loading_mode="r+"
+    external_dataset = MultiPathLabelFreeDataset(
+        EXTERNAL_IMAGES_LOCATIONS, augmentations=CPU_AUGS, loading_mode="r+"
     )
 
     generator = torch.Generator()
