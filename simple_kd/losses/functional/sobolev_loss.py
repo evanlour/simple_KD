@@ -3,7 +3,12 @@ import torch.nn.functional as F
 from torch.autograd import grad
 
 
-def _get_normalized_grad(target: torch.Tensor, imgs: torch.Tensor, labels: torch.Tensor, create_graph: bool = False):
+def _get_normalized_grad(
+    target: torch.Tensor,
+    imgs: torch.Tensor,
+    labels: torch.Tensor,
+    create_graph: bool = False,
+):
     target_out = torch.gather(target, 1, labels.view(-1, 1))
     target_grad = grad(
         outputs=target_out,
@@ -37,7 +42,9 @@ def sobolev_loss(
         images (torch.Tensor): The input images.
         gamma (float, optional): The gamma the loss will be multiplied with. Defaults to 256.0.
     """
-    student_grad = _get_normalized_grad(student_output, images, labels, create_graph=True)
+    student_grad = _get_normalized_grad(
+        student_output, images, labels, create_graph=True
+    )
     teacher_grad = _get_normalized_grad(teacher_output, images, labels)
     loss = F.mse_loss(student_grad, teacher_grad.detach())
     return loss * gamma

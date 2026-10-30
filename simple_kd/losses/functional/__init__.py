@@ -6,8 +6,8 @@ from .kd_svd_loss import kd_svd_loss
 from .nst_loss import nst_loss
 from .pkt_loss import pkt_loss
 from .rkd_loss import rkd_angle_loss, rkd_dist_loss
-from .sobolev_loss import sobolev_loss
 from .skeptical_loss import skeptical_loss
+from .sobolev_loss import sobolev_loss
 from .sp_loss import sp_loss
 from .ssp_loss import ssp_loss
 

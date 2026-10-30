@@ -14,9 +14,7 @@ class SobolevLoss(torch.nn.Module):
         gamma (float, optional): The gamma the loss will be multiplied with. Defaults to 256.0.
     """
 
-    def __init__(
-        self, gamma: float = 256.0
-    ):
+    def __init__(self, gamma: float = 256.0):
         super().__init__()
         self.gamma = gamma
 

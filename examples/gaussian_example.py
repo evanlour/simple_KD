@@ -9,16 +9,21 @@ from torchvision.transforms import v2
 
 from simple_kd.data_free import gaussian_train
 from simple_kd.training import evaluate_model
-from simple_kd.utils import LabelFreeDataset
+from simple_kd.utils import MultiPathLabelFreeDataset
 
 CLASSES = 100
-EPOCHS = 200  # 200 epochs for StyleGAN, 400 for Gaussian Noise
+EPOCHS = 50  # 100 epochs for StyleGAN, 400 for Gaussian Noise
 BATCH = 256
 WORKERS = 2
 STEPS_PER_EPOCH = 100
-USE_GAUSSIAN_NOISE = True
+USE_GAUSSIAN_NOISE = False
 
-SYNTHETIC_IMAGES_LOCATION = "/mnt/storage/Datasets/stylegan/stylegan.npy"
+SYNTHETIC_IMAGES_LOCATIONS = [
+    "/mnt/storage/Datasets/stylegan/stylegan.npy",
+    "/mnt/storage/Datasets/dead_leaves/dead_leaves.npy",
+    "/mnt/storage/Datasets/feature_vis/feature_vis.npy",
+    "/mnt/storage/Datasets/statistical/statistical.npy",
+]
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
@@ -75,8 +80,8 @@ if __name__ == "__main__":
     torch.backends.cudnn.allow_tf32 = True  # Disable if unsupported
 
     # Load Dataset
-    trainset = LabelFreeDataset(
-        SYNTHETIC_IMAGES_LOCATION, loading_mode="r+", augmentations=CPU_AUGS
+    trainset = MultiPathLabelFreeDataset(
+        SYNTHETIC_IMAGES_LOCATIONS, loading_mode="r+", augmentations=CPU_AUGS
     )
     generator = torch.Generator()
 
@@ -156,7 +161,7 @@ if __name__ == "__main__":
         accelerator=accelerator,
         student_model=student_model,  # type: ignore
         teacher_model=teacher_model,  # type: ignore
-        augmentations=None,  # type: ignore ,  Pure noise does not need augmentations, styleGAN needs GPU_AUGS
+        augmentations=GPU_AUGS,  # type: ignore ,  Pure noise does not need augmentations so None, styleGAN needs GPU_AUGS
         batch_size=BATCH,
         model_multipler=1.0,
         student_optimizer=student_optimizer,
