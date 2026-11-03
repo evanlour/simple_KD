@@ -138,9 +138,8 @@ def zskt_train(
         generator_train_total = torch.tensor(0, device=accelerator.device)
         start_time = time.perf_counter()
 
-        # Generator phase
+        student_model.eval()
         generator.train()
-        student_model.train()
         for _ in range(generator_steps):
             gen_imgs = images_from_generator(
                 generator,
@@ -164,11 +163,11 @@ def zskt_train(
             )
             total_gen_loss += gen_loss.detach() * batch_size
             generator_train_total += batch_size
-            # print(gen_loss)
 
-        # Student phase: minimize KD + AT discrepancy
-        generator.train()
+        student_optimizer.zero_grad(set_to_none=True)
+
         student_model.train()
+        generator.eval()
         for _ in range(model_steps):
             gen_imgs = images_from_generator(
                 generator,
@@ -176,7 +175,7 @@ def zskt_train(
                 accelerator.device,
                 batch_size,
                 generator_latent_size,
-                requires_grad=True,
+                requires_grad=False,
             )
             train_loss, gen_statistics = train_model_with_generator(
                 accelerator,

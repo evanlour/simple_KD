@@ -7,23 +7,18 @@ from accelerate import Accelerator
 from torchvision.models import resnet18, resnet34
 from torchvision.transforms import v2
 
-from simple_kd.data_free import gaussian_train
+from simple_kd.data_free import dafl_train
+from simple_kd.generators import SimpleGenerator
 from simple_kd.training import evaluate_model
-from simple_kd.utils import MultiPathLabelFreeDataset
+from simple_kd.utils import apply_hooks
 
 CLASSES = 100
-EPOCHS = 50  # 100 epochs for StyleGAN, 400 for Gaussian Noise
-BATCH = 256
+EPOCHS = 100
+BATCH = 512
 WORKERS = 2
-STEPS_PER_EPOCH = 100
-USE_GAUSSIAN_NOISE = False
+STEPS_PER_EPOCH = 120
+GENERATOR_LATENT_SIZE = 128
 
-SYNTHETIC_IMAGES_LOCATIONS = [
-    "/mnt/storage/Datasets/stylegan/stylegan.npy",
-    "/mnt/storage/Datasets/dead_leaves/dead_leaves.npy",
-    "/mnt/storage/Datasets/feature_vis/feature_vis.npy",
-    "/mnt/storage/Datasets/statistical/statistical.npy",
-]
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
@@ -31,14 +26,17 @@ TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
 TEACHER_MODEL_LOCATION = (
     "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
 )
-TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_gaussian_results"
+TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_dafl_results"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
 
 GPU_AUGS = v2.Compose(
     [
+        # v2.RandomHorizontalFlip(p=0.5),
+        # v2.RandAugment(num_ops=2, magnitude=9), # RandAugment is unsafe and crashes the generator!
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
+        # v2.RandomErasing(p=0.35, scale=(0.02, 0.2), ratio=(0.3, 3.3), value=0),
     ]
 )
 
@@ -66,7 +64,6 @@ if __name__ == "__main__":
         step_scheduler_with_optimizer=False,  # Set to false if scheduler is updated per epoch
     )
     device = accelerator.device
-    torch.autograd.set_detect_anomaly(True)
     # Set deterministic algorithms for reproducibility
     torch.manual_seed(42)
     np.random.seed(22)
@@ -79,25 +76,6 @@ if __name__ == "__main__":
     torch.backends.cuda.matmul.allow_tf32 = True  # Disable if unsupported
     torch.backends.cudnn.allow_tf32 = True  # Disable if unsupported
 
-    # Load Dataset
-    trainset = MultiPathLabelFreeDataset(
-        SYNTHETIC_IMAGES_LOCATIONS, loading_mode="r+", augmentations=CPU_AUGS
-    )
-    generator = torch.Generator()
-
-    generator.manual_seed(58709)
-    train_loader = torch.utils.data.DataLoader(
-        trainset,
-        batch_size=BATCH,
-        shuffle=True,
-        num_workers=WORKERS,
-        pin_memory=True,
-        prefetch_factor=2,
-        generator=generator,
-        persistent_workers=True,
-        worker_init_fn=seed_worker,
-    )
-
     teacher_model = resnet34()
     teacher_model.conv1 = torch.nn.Conv2d(
         in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
@@ -107,16 +85,14 @@ if __name__ == "__main__":
     teacher_model.fc = torch.nn.Linear(feats, CLASSES)
     checkpoint = torch.load(TEACHER_MODEL_LOCATION)
     teacher_model.load_state_dict(checkpoint)
-
-    # Freezing the teacher
+    # To make sure the teacher is frozen
     for param in teacher_model.parameters():
         param.requires_grad = False
 
-    for module in teacher_model.modules():
-        if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
-            module.track_running_stats = (
-                False  # Prevents noise from corrupting the teacher
-            )
+    # Hook intermediate layers for DAFL feature activation loss
+    teacher_stages = apply_hooks(
+        teacher_model, ["layer1.2.bn2", "layer2.3.bn2", "layer3.2.bn2", "layer4.2.bn2"]
+    )
 
     student_model = resnet18()
     student_model.conv1 = torch.nn.Conv2d(
@@ -126,9 +102,11 @@ if __name__ == "__main__":
     student_feats = student_model.fc.in_features
     student_model.fc = torch.nn.Linear(student_feats, CLASSES)
 
+    image_generator = SimpleGenerator(32, 128, 3)
+
     student_optimizer = torch.optim.SGD(
         student_model.parameters(),
-        lr=0.1,
+        lr=1e-1,
         weight_decay=5e-4,
         momentum=0.9,
         nesterov=True,
@@ -137,14 +115,36 @@ if __name__ == "__main__":
     student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         student_optimizer, T_max=EPOCHS, eta_min=1e-3
     )
+    generator_optimizer = torch.optim.AdamW(
+        image_generator.parameters(),
+        lr=2e-3,
+        betas=(0.5, 0.999),
+        weight_decay=0.05,
+        fused=True,
+    )
+    generator_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        generator_optimizer, T_max=EPOCHS, eta_min=5e-4
+    )
 
     student_model = student_model.to(memory_format=torch.channels_last)  # type: ignore
     teacher_model = teacher_model.to(memory_format=torch.channels_last)  # type: ignore
-    student_model, teacher_model, student_optimizer, train_loader = accelerator.prepare(
-        student_model, teacher_model, student_optimizer, train_loader
+    image_generator = image_generator.to(memory_format=torch.channels_last)  # type: ignore
+    (
+        student_model,
+        teacher_model,
+        student_optimizer,
+        image_generator,
+        generator_optimizer,
+    ) = accelerator.prepare(
+        student_model,
+        teacher_model,
+        student_optimizer,
+        image_generator,
+        generator_optimizer,
     )
     student_model = torch.compile(student_model)
     teacher_model = torch.compile(teacher_model)
+    image_generator = torch.compile(image_generator)
 
     GPU_AUGS = GPU_AUGS.to(device)
 
@@ -155,26 +155,30 @@ if __name__ == "__main__":
         "classes": CLASSES,
     }
 
-    synthetic_loader = train_loader if not USE_GAUSSIAN_NOISE else None
-
-    history = gaussian_train(
+    history = dafl_train(
         accelerator=accelerator,
         student_model=student_model,  # type: ignore
         teacher_model=teacher_model,  # type: ignore
-        augmentations=GPU_AUGS,  # type: ignore ,  Pure noise does not need augmentations so None, styleGAN needs GPU_AUGS
+        generator=image_generator,  # type: ignore
+        augmentations=GPU_AUGS,
         batch_size=BATCH,
-        model_multipler=1.0,
         student_optimizer=student_optimizer,
+        generator_optimizer=generator_optimizer,
         epochs=EPOCHS,
-        synthetic_loader=synthetic_loader,
-        print_frequency=2,
-        validation_frequency=9,
-        noise_shape=(3, 32, 32),
+        one_hot_gamma=1.0,
+        feature_gamma=0.5,
+        info_entropy_gamma=80.0,
+        print_frequency=5,
+        validation_frequency=15,
+        generator_latent_size=GENERATOR_LATENT_SIZE,
         steps_per_epoch=STEPS_PER_EPOCH,
         scheduler=student_scheduler,
+        generator_scheduler=generator_scheduler,
+        teacher_stages=teacher_stages,
         save_location=Path(TARGET_SAVE_LOCATION),
         save_history=True,
         save_student_model=True,
+        save_generator=True,
         validation_metrics=validation_params,
     )
 
@@ -190,12 +194,7 @@ if __name__ == "__main__":
         classes=CLASSES,
         save_folder=Path(TARGET_SAVE_LOCATION),
         save_prefix="student",
-        train_batchnorms=True,
     )
-
-    for module in teacher_model.modules():  # type: ignore
-        if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
-            module.track_running_stats = True  # Restart the parameters
 
     print("Teacher model results")
     _ = evaluate_model(

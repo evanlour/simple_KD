@@ -7,15 +7,17 @@ from accelerate import Accelerator
 from torchvision.models import resnet18, resnet34
 from torchvision.transforms import v2
 
-from simple_kd.data_free import dfad_train
+from simple_kd.data_free import zskt_train
 from simple_kd.generators import SimpleGenerator
 from simple_kd.training import evaluate_model
+from simple_kd.utils.feature_selector import apply_hooks
 
 CLASSES = 100
-EPOCHS = 100
-BATCH = 256
+EPOCHS = 1000
+BATCH = 512
 WORKERS = 2
-STEPS_PER_EPOCH = 400
+GENERATOR_STEPS_PER_EPOCH = 1
+MODEL_STEPS_PER_EPOCH = 20
 GENERATOR_LATENT_SIZE = 128
 
 VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
@@ -25,16 +27,14 @@ TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
 TEACHER_MODEL_LOCATION = (
     "/mnt/storage/Datasets_results/CIFAR100_train_results/model.pth"
 )
-TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_dfad_results"
+TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_zskt_results"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
 
 GPU_AUGS = v2.Compose(
     [
-        # v2.RandAugment(num_ops=2, magnitude=9), # RandAugment is unsafe and crashes the generator!
-        v2.ToDtype(
-            torch.float32, scale=True
-        ),  # Normalization here damages the training
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.5072, 0.4865, 0.4406], std=[0.2673, 0.2564, 0.2761]),
     ]
 )
 
@@ -62,7 +62,6 @@ if __name__ == "__main__":
         step_scheduler_with_optimizer=False,  # Set to false if scheduler is updated per epoch
     )
     device = accelerator.device
-    torch.autograd.set_detect_anomaly(True)
     # Set deterministic algorithms for reproducibility
     torch.manual_seed(42)
     np.random.seed(22)
@@ -96,14 +95,21 @@ if __name__ == "__main__":
     student_feats = student_model.fc.in_features
     student_model.fc = torch.nn.Linear(student_feats, CLASSES)
 
-    image_generator = SimpleGenerator(32, 128, 3)
+    # Hook intermediate layers for both models
+    teacher_stages = apply_hooks(
+        teacher_model, ["layer1.2.bn2", "layer2.3.bn2", "layer3.2.bn2", "layer4.2.bn2"]
+    )
+    student_stages = apply_hooks(
+        student_model, ["layer1.1.bn2", "layer2.1.bn2", "layer3.1.bn2", "layer4.1.bn2"]
+    )
 
+    image_generator = SimpleGenerator(32, 128, 3, momentum=0.8)
     student_optimizer = torch.optim.SGD(
         student_model.parameters(),
         lr=1e-1,
         weight_decay=5e-4,
         momentum=0.9,
-        nesterov=True,
+        nesterov=False,
         fused=True,
     )
     student_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -112,12 +118,12 @@ if __name__ == "__main__":
     generator_optimizer = torch.optim.AdamW(
         image_generator.parameters(),
         lr=1e-3,
-        betas=(0.9, 0.999),
+        betas=(0.5, 0.999),
         weight_decay=0.0,
         fused=True,
     )
     generator_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        generator_optimizer, T_max=EPOCHS, eta_min=5e-4
+        generator_optimizer, T_max=EPOCHS, eta_min=1e-3
     )
 
     student_model = student_model.to(memory_format=torch.channels_last)  # type: ignore
@@ -149,23 +155,29 @@ if __name__ == "__main__":
         "classes": CLASSES,
     }
 
-    history = dfad_train(
+    _ = zskt_train(
         accelerator=accelerator,
         student_model=student_model,  # type: ignore
         teacher_model=teacher_model,  # type: ignore
         generator=image_generator,  # type: ignore
         augmentations=GPU_AUGS,
         batch_size=BATCH,
-        use_log1p=False,
-        print_frequency=2,
-        validation_frequency=15,
         student_optimizer=student_optimizer,
         generator_optimizer=generator_optimizer,
         epochs=EPOCHS,
         generator_latent_size=GENERATOR_LATENT_SIZE,
-        steps_per_epoch=STEPS_PER_EPOCH,
+        generator_steps=GENERATOR_STEPS_PER_EPOCH,
+        model_steps=MODEL_STEPS_PER_EPOCH,
+        temperature=4.0,
+        model_multipler=1.0,
+        generator_multiplier=1.0,
+        model_at_gamma=0.0,
+        print_frequency=5,
+        validation_frequency=30,
         scheduler=student_scheduler,
         generator_scheduler=generator_scheduler,
+        student_stages=student_stages,
+        teacher_stages=teacher_stages,
         save_location=Path(TARGET_SAVE_LOCATION),
         save_history=True,
         save_student_model=True,

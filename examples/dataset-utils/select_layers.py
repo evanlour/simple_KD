@@ -1,13 +1,21 @@
+import timm
 import torch
+from torchvision.models import resnet18  # , resnet34, mobilenet_v3_small
 from torchvision.models.feature_extraction import get_graph_node_names
 
 from simple_kd.utils import FeatureSelector, apply_hooks
 
-if __name__ == "__main__":
-    from torchvision.models import resnet18  # , resnet34, mobilenet_v3_small
+USE_VIT = True
 
-    model = resnet18()
+if __name__ == "__main__":
+    if USE_VIT:
+        model = timm.create_model(
+            "deit_small_patch16_224", pretrained=True, num_classes=100
+        )
+    else:
+        model = resnet18()
     _, eval_nodes = get_graph_node_names(model)
+    print(eval_nodes)
     selector = FeatureSelector(eval_nodes)
     vals = selector.extract()
     print(f"The selected layers are: {vals}")

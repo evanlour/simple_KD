@@ -151,6 +151,11 @@ def dfad_train(
             accelerator.reduce(gen_spread, reduction="sum").item() / epoch_samples  # type: ignore
         )
 
+        # Generator phase: maximize the student-teacher discrepancy.
+        # The student is frozen (eval + no optimizer updates) exactly like the original DFAD,
+        # and any gradients accumulated in the student from this phase are discarded afterwards.
+        student_model.eval()
+        generator.train()
         gen_imgs = images_from_generator(
             generator,
             augmentations,
@@ -158,7 +163,7 @@ def dfad_train(
             batch_size,
             generator_latent_size,
             requires_grad=True,
-        ).detach()
+        )
         gen_loss = train_generator(
             accelerator,
             gen_imgs,
@@ -171,6 +176,7 @@ def dfad_train(
             teacher_stages=None,
             clipper=clipper,
         )
+        student_optimizer.zero_grad(set_to_none=True)
 
         if scheduler is not None:
             scheduler.step()

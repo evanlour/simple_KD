@@ -22,9 +22,11 @@ accelerate library in order to support multiple GPUs.
   - [Data-Free Knowledge Distillation (DFKD)](#data-free-knowledge-distillation-dfkd)
   - [Synthetic Noise & Inductive Bias Generators](#synthetic-noise--inductive-bias-generators)
 - [Installation](#installation)
-- [Data & Hook Utilities](#data--hook-utilities-simple_kd.utils)
+- [Data & Hook Utilities](#data--hook-utilities)
 - [Included Examples](#included-examples)
-- [Performance Results](#performance-results)
+- [Performance Results (CNNs)](#performance-results-cnns)
+- [Performance Results (ViTs)](#performance-results-vits)
+- [Performance Results (Cross-arch)](#performance-results-cross-arch)
 - [Testing & Quality Verification](#testing--quality-verification)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
@@ -42,11 +44,6 @@ accelerate library in order to support multiple GPUs.
 - **Synthetic Noise Datasets**: Generates structured noise datasets (Dead Leaves, Fourier Feature Inversion, Wavelet Steerable Pyramids, Untrained StyleGAN2) allowing networks to learn visual inductive biases without natural data.
 - **Simplicity**: Designed from scratch to be easy to pick up and familiar to the pytorch syntax.
 - **Zero-Leak Hook Management**: `FeatureSelector` automatically manages PyTorch forward hooks and garbage collection for multi-layer representation distillation.
-
----
-
-## Conveniences
-
 - **A vast amount of available techniques**: Logit matching (KD, DKD), spatial attention (AT), representation similarity (SP, SSP), geometric relationships (RKD-Distance, RKD-Angle, PKT), and skeptical student gating.
 - **Modular Data-Free Engines**: Plug-and-play adversarial and generative distillation algorithms.
 - **Telemetry & Artifacts**: Automatic CSV training history logging, metric summaries, and Parquet prediction matrices for evaluation.
@@ -145,6 +142,18 @@ For visualization (Plotly, Matplotlib, Seaborn) or developer tooling (pytest, ru
 pip install -e ".[viz,dev]"
 ```
 
+### How to get started
+
+In order to get started, you will first need to prepare the CIFAR100 dataset. In order to do this, you can run:
+
+```bash
+python ./examples/dataset-utils/prepare_data.py --include_CIFAR100 --save_location "your_save_location"
+```
+
+Afterwards, you will need a teacher in order to perform knowledge distillation. You can now go to '''examples/classification/CNNs/train_example.py''' and modify the output and dataset locations and you are ready to run the script!
+
+Now with a teacher you can distill knowledge from him to another model!
+
 ---
 
 ## Data & Hook Utilities
@@ -162,24 +171,40 @@ pip install -e ".[viz,dev]"
 
 ## Included Examples
 
-The [examples](./examples) directory provides turnkey scripts ready to run:
+The [examples](./examples) directory provides turnkey scripts ready to run, or just need the dataset and teacher model locations. The examples are organized first by the objective of the task (such as classification, segmentation etc.) and then by the architectures of the teacher and the student
+models involved, mostly differentiating between classical CNNs and vision transformers.
+
+Then train and distillation examples serve as an easy way to perform non data free knowledge distillation. When the student's architecture is a CNN, we limit the available data to 20% of the teacher's, while when the student is a transformer, he is not using imagenet pretrained weights.
 
 | Script | Description | Run Command |
 | :--- | :--- | :--- |
-| [train_example.py](./examples/train_example.py) | Train a baseline teacher model with `accelerate`. | `python ./examples/train_example.py` |
-| [distill_example.py](./examples/distill_example.py) | Classical distillation pipeline using the DKD method | `python ./examples/distill_example.py` |
-| [dafl_example.py](./examples/dafl_example.py) | Data-Free Learning (DAFL) with simultaneous generator updates. | `python ./examples/dafl_example.py` |
-| [dfad_example.py](./examples/dfad_example.py) | Data-Free Adversarial Distillation (DFAD) with min-max game. | `python ./examples/dfad_example.py` |
-| [zskt_example.py](./examples/zskt_example.py) | Zero-Shot Knowledge Transfer (ZSKT) adversarial training. | `python ./examples/zskt_example.py` |
-| [gaussian_example.py](./examples/gaussian_example.py) | Distillation with pure synthetic Gaussian noise. | `python ./examples/gaussian_example.py` |
-| [generate_synthetic_noise.py](./examples/generate_synthetic_noise.py) | Generates Dead Leaves and StyleGAN synthetic datasets. | `python ./examples/generate_synthetic_noise.py` |
-| [select_layers.py](./examples/select_layers.py) | Inspect model layers and verify hook extraction. | `python ./examples/select_layers.py` |
-| [prepare_data.py](./examples/prepare_data.py) | Prepares(and downloads) the dataset that will be tested. Currently only CIFAR100 | `python ./examples/prepare_data.py` |
-| [use_train_profiler.py](./examples/use_train_profiler.py) | Runs PyTorch Profiler on a sample training loop. | `python ./examples/use_train_profiler.py` |
+| [train_example.py](./examples/classification/CNNs/train_example.py) | Train a baseline teacher model with `accelerate`. | `python ./examples/classification/CNNs/train_example.py` |
+| [distill_example.py](./examples/classification/CNNs/distill_example.py) | Classical distillation pipeline using the DKD method. | `python ./examples/classification/CNNs/distill_example.py` |
+| [vit_train_example.py](./examples/classification/ViTs/vit_train_example.py) | Train a baseline ViT teacher model, optionally with pretrained weights. | `python ./examples/classification/ViTs/vit_train_example.py` |
+| [vit_distill_example.py](./examples/classification/ViTs/vit_distill_example.py) | Distillation pipeline between Transformers (ViT → ViT). | `python ./examples/classification/ViTs/vit_distill_example.py` |
+
+Data-free distillation examples for CNN architectures are:
+
+| Script | Description | Run Command |
+| :--- | :--- | :--- |
+| [dafl_example.py](./examples/classification/CNNs/dafl_example.py) | Data-Free Learning (DAFL) with simultaneous generator updates. | `python ./examples/classification/CNNs/dafl_example.py` |
+| [dfad_example.py](./examples/classification/CNNs/dfad_example.py) | Data-Free Adversarial Distillation (DFAD) with min-max game. | `python ./examples/classification/CNNs/dfad_example.py` |
+| [zskt_example.py](./examples/classification/CNNs/zskt_example.py) | Zero-Shot Knowledge Transfer (ZSKT) adversarial training. | `python ./examples/classification/CNNs/zskt_example.py` |
+| [gaussian_example.py](./examples/classification/CNNs/gaussian_example.py) | Distillation with pure synthetic Gaussian noise. | `python ./examples/classification/CNNs/gaussian_example.py` |
+| [odsd_example.py](./examples/classification/CNNs/odsd_example.py) | Distillation from open-world data (ODSD) instead of a generator. | `python ./examples/classification/CNNs/odsd_example.py` |
+
+Some more general examples on how to prepare the CIFAR100 dataset, generate synthetic noise, choose intermediate feature layers etc are listed below:
+
+| Script | Description | Run Command |
+| :--- | :--- | :--- |
+| [prepare_data.py](./examples/dataset-utils/prepare_data.py) | Prepares (and downloads) the dataset that will be used. Currently only CIFAR100. | `python ./examples/dataset-utils/prepare_data.py` |
+| [generate_synthetic_noise.py](./examples/dataset-utils/generate_synthetic_noise.py) | Generates Dead Leaves, StyleGAN and other synthetic noise datasets. | `python ./examples/dataset-utils/generate_synthetic_noise.py` |
+| [select_layers.py](./examples/dataset-utils/select_layers.py) | Inspect model layers and verify hook extraction. | `python ./examples/dataset-utils/select_layers.py` |
+| [use_train_profiler.py](./examples/classification/CNNs/use_train_profiler.py) | Runs PyTorch Profiler on a sample training loop. | `python ./examples/classification/CNNs/use_train_profiler.py` |
 
 ---
 
-## Performance Results
+## Performance Results (CNNs)
 
 The following table summarizes the performance on CIFAR100 of various distillation methods implemented in `simple_kd`. Some notes about the training:
 
@@ -227,6 +252,23 @@ For distillation training only 20% of the train data were kept.
 These benchmarks are not representative of performance in real world problems but they give us an idea of how they work. Some methods are better suited for specific problems.
 
 ---
+
+## Performance Results (ViTs)
+
+Some notes about using knowledge distillation in-between Transformers:
+
+- Due to the low data, without pretrained weights they are worse than CNNs especially if trained for fewer epochs to match the CNNs
+- When pretrained, the benefits from KD are barely marginal and usually not worth the complexity
+- Due to this there will be 2 separate experiments conducted on this: 1) How effectively can KD help an untrained ViT learn from an already trained ViT (with pretrained weights to simulate a full training run)? 2) How effectively can a trained ViT transformer pass knowledge to a CNN?
+- The time budget for ViT -> ViT operations will be set to 30 epochs while ViT -> CNN operations will still use 100 epochs
+- The examples will have examples of training ViTs using pretrained weights. In this case the lr is 5e-5 -> 5e-6. From scratch training the lr will be an order of magniture bigger, so 5e-4 -> 5e-5. All other hyperparameters will remain the same
+- If needed, more info for the cross architecture examples will be given on the next section
+
+___
+
+## Performance Results (Cross-arch)
+
+___
 
 ## Testing & Quality Verification
 

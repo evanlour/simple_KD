@@ -12,6 +12,7 @@ class SimpleGenerator(torch.nn.Module):
         latent_size (int): Dimension of the input latent noise vector z.
         channels (int): Number of output image color channels (e.g. 3 for RGB).
         channel_format (torch.memory_format, optional): PyTorch memory layout (e.g. channels_last). Defaults to torch.channels_last.
+        momentum (float, optional): Optional setting of batchnorm momentum. Defaults to 0.1.
     """
 
     def __init__(
@@ -20,6 +21,7 @@ class SimpleGenerator(torch.nn.Module):
         latent_size: int,
         channels: int,
         channel_format=torch.channels_last,
+        momentum: float = 0.1,
     ):
         super().__init__()
 
@@ -30,13 +32,13 @@ class SimpleGenerator(torch.nn.Module):
 
         self.block1 = torch.nn.Sequential(
             torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-            torch.nn.BatchNorm2d(128, momentum=0.1),
+            torch.nn.BatchNorm2d(128, momentum=momentum),
             torch.nn.LeakyReLU(0.2, inplace=True),
         )
 
         self.block2 = torch.nn.Sequential(
             torch.nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1),
-            torch.nn.BatchNorm2d(64, momentum=0.1),
+            torch.nn.BatchNorm2d(64, momentum=momentum),
             torch.nn.LeakyReLU(0.2, inplace=True),
             torch.nn.Conv2d(64, channels, kernel_size=3, stride=1, padding=1),
             torch.nn.Tanh(),
