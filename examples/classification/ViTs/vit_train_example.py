@@ -11,7 +11,6 @@ from torchvision.transforms import v2
 from simple_kd.training import evaluate_model, train
 from simple_kd.utils import Dataset, SimpleGradClip
 
-
 CLASSES = 100
 EPOCHS = 30
 BATCH = 128
@@ -23,9 +22,7 @@ VAL_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_images.npy"
 VAL_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_val_labels.npy"
 TEST_IMAGES_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_images.npy"
 TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
-TARGET_SAVE_LOCATION = (
-    "/mnt/storage/Datasets_results/CIFAR100_vit_train_results"
-)
+TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_vit_train_results"
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
 
