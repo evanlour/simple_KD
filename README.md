@@ -201,6 +201,12 @@ Some more general examples on how to prepare the CIFAR100 dataset, generate synt
 | [generate_synthetic_noise.py](./examples/dataset-utils/generate_synthetic_noise.py) | Generates Dead Leaves, StyleGAN and other synthetic noise datasets. | `python ./examples/dataset-utils/generate_synthetic_noise.py` |
 | [select_layers.py](./examples/dataset-utils/select_layers.py) | Inspect model layers and verify hook extraction. | `python ./examples/dataset-utils/select_layers.py` |
 | [use_train_profiler.py](./examples/classification/CNNs/use_train_profiler.py) | Runs PyTorch Profiler on a sample training loop. | `python ./examples/classification/CNNs/use_train_profiler.py` |
+| [create_seaborn_plots.py](./examples/dataset-utils/create_seaborn_plots.py) | Create plots from the history generated from the train and distillation runs using matplotlib and seaborn. | `python ./examples/dataset-utils/create_seaborn_plots.py` |
+| [create_html_report.py](./examples/dataset-utils/create_html_report.py) | Create interactive plots from the history generated from the train and distillation runs using plotly. | `python ./examples/dataset-utils/create_html_report.py` |
+
+Teacher/Student train accuracy |
+:-----------------------------:|
+![](./res/train_lines.png)   
 
 ---
 
