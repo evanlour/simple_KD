@@ -14,6 +14,8 @@ from simple_kd.losses import DKDLoss
 from simple_kd.training import distill, evaluate_model
 from simple_kd.utils import Dataset
 
+# from simple_kd.utils import apply_hooks  # If you go for a method that needs intermediate features
+
 CLASSES = 100
 EPOCHS = 100
 BATCH = 256
@@ -174,6 +176,15 @@ if __name__ == "__main__":
     student_model.fc = torch.nn.Linear(student_feats, CLASSES)
 
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+
+    # If you go for a method that needs intermediate features
+    # teacher_stages = apply_hooks(
+    #     teacher_model, ["layer1.2.bn2", "layer2.3.bn2", "layer3.2.bn2", "layer4.2.bn2"] # type: ignore
+    # )
+    # student_stages = apply_hooks(
+    #     student_model, ["layer1.1.bn2", "layer2.1.bn2", "layer3.1.bn2", "layer4.1.bn2"] # type: ignore
+    # )
+
     distillation_criterion = DKDLoss()
     student_optimizer = torch.optim.AdamW(
         student_model.parameters(),
@@ -207,6 +218,8 @@ if __name__ == "__main__":
         student_model=student_model,  # type: ignore
         train_loader=train_loader,
         student_optimizer=student_optimizer,
+        # student_stages=student_stages,  # If you go for a method that needs intermediate features
+        # teacher_stages=teacher_stages,  # If you go for a method that needs intermediate features
         criterion=criterion,
         distillation_criterion=distillation_criterion,
         epochs=EPOCHS,

@@ -5,8 +5,9 @@ import torch.nn.functional as F
 def nst_loss(
     student_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
     teacher_stages: list[torch.Tensor] | tuple[torch.Tensor, ...],
-    stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.3, 0.6),
+    stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
     gamma: float = 256.0,
+    interpolation_mode: str = "bilinear",
 ) -> torch.Tensor:
     """Computes the Neuron Selectivity Transfer (NST) loss.
 
@@ -21,8 +22,9 @@ def nst_loss(
         teacher_stages (list[torch.Tensor] | tuple[torch.Tensor, ...]): Intermediate feature maps from teacher model.
             Each tensor should be of shape (batch_size, channels, height, width).
         stage_percentages (tuple[float, ...] | list[float], optional): Per-stage weight fractions for NST loss.
-            Defaults to (0.1, 0.1, 0.3, 0.6).
+            Defaults to (0.1, 0.1, 0.2, 0.6).
         gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 256.0.
+        interpolation_mode (str, optional): The interpolation mode if the stages do not match. For 3D (attention for example), choose linear, while for 4D bilinear.
 
     Returns:
         torch.Tensor: The NST loss, which is the polykernel distance between student and teacher feature maps.
@@ -34,7 +36,7 @@ def nst_loss(
     ):
         if teacher_stage.shape[2:] != student_stage.shape[2:]:
             student_stage = F.interpolate(
-                student_stage, size=teacher_stage.shape[2:], mode="bilinear"
+                student_stage, size=teacher_stage.shape[2:], mode=interpolation_mode
             )
 
         student_map = student_stage.view(

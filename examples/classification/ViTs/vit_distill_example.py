@@ -8,10 +8,11 @@ from accelerate import Accelerator
 from torch.utils import data
 from torchvision.transforms import v2
 
-from simple_kd.losses import PKTLoss
+from simple_kd.losses import KDLoss
 from simple_kd.training import distill, evaluate_model
 from simple_kd.utils import Dataset, SimpleGradClip
 
+# from simple_kd.utils import apply_hooks  # If you go for a method that needs intermediate features
 CLASSES = 100
 EPOCHS = 30
 BATCH = 128
@@ -150,7 +151,7 @@ if __name__ == "__main__":
     )
 
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
-    distillation_criterion = PKTLoss()
+    distillation_criterion = KDLoss()
     student_optimizer = torch.optim.AdamW(
         student_model.parameters(),
         lr=5e-4,
@@ -162,6 +163,26 @@ if __name__ == "__main__":
         student_optimizer, T_max=EPOCHS, eta_min=5e-5
     )
     clipper = SimpleGradClip(clip_type="norm", clip_value=4.0)
+
+    # If you go for a method that needs intermediate features
+    # teacher_stages = apply_hooks(
+    #     teacher_model,
+    #     [
+    #         "blocks.2.attn.qkv",
+    #         "blocks.5.attn.qkv",
+    #         "blocks.8.attn.qkv",
+    #         "blocks.11.attn.qkv",
+    #     ],  # type: ignore
+    # )
+    # student_stages = apply_hooks(
+    #     student_model,
+    #     [
+    #         "blocks.2.attn.qkv",
+    #         "blocks.5.attn.qkv",
+    #         "blocks.8.attn.qkv",
+    #         "blocks.11.attn.qkv",
+    #     ],  # type: ignore
+    # )
 
     student_model = student_model.to(memory_format=torch.channels_last)  # type: ignore
     teacher_model = teacher_model.to(memory_format=torch.channels_last)  # type: ignore
@@ -188,6 +209,8 @@ if __name__ == "__main__":
         distillation_criterion=distillation_criterion,
         epochs=EPOCHS,
         clipper=clipper,
+        # teacher_stages=teacher_stages, # If you go for a method that needs intermediate features
+        # student_stages=student_stages, # If you go for a method that needs intermediate features
         augmentations=GPU_AUGS,
         val_augmentations=VAL_AUGS,
         student_scheduler=student_scheduler,

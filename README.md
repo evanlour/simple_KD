@@ -214,15 +214,15 @@ Teacher/Student train accuracy |
 
 The following table summarizes the performance on CIFAR100 of various distillation methods implemented in `simple_kd`. Some notes about the training:
 
-- For the Non Data Free methods the stock hyperparameters for each method were used. Train times were similar and around the 8 minute mark
+- For the Non Data Free methods the stock hyperparameters for each method were used. Train times were similar and around the 8 minute mark.
 - For comparing non Data Free methods only 20% of the train data was used, simulating a reduced data scenario. Due to this the benchmark numbers might be drastically different than the ones mentioned on their original papers, with some methods vastly outperforming others due to the nature of the problem. Generally, almost all the methods showed increased performance compared to the baseline, even complimentary methods such as the CC loss.
 - For the KD SVD method there were several modifications needed due to the SVD solver, diverging significantly from the original implementation.
 - For the Sobolev method the default distillation pipeline will not work. In order for it to work ```inputs = inputs.requires_grad_(True)``` is needed before retrieving the outputs, as well as enabling grads for the teacher and disabling compiling the models. I do not implement options for all of these inside the current loop as i believe it will be made overly complex for the other existing methods. Training is also around 4x times slower.
-- For the Data Free methods, as there are a lot of variables, the hyperparameters used are hardcoded inside the examples. As Data free methods are usually time-intensive, i tried to keep a total train time of around an hour for each. I will attach more info for the methods below. For reference, my hardware consists of an Nvidia RTX3060 and 16GB or RAM
+- For the Data Free methods, as there are a lot of variables, the hyperparameters used are hardcoded inside the examples. As Data free methods are usually time-intensive, i tried to keep a total train time of around an hour for each. I will attach more info for the methods below. For reference, my hardware consists of an Nvidia RTX3060 and 16GB or RAM.
 -  I set the DAFL epochs to 100  instead of 2000 used in the original paper and used a more aggresive optimizer setup as well as a much higher info entropy loss (80 instead of 20) to prevent generator collapse
 - For the gaussian distillation 50K images of StyleGAN seems to not be enough as training goes almost immediately to 40+% and then very slowly increases. Using the combined noise datasets yields similar performance to the gaussian noise.
 - The ODSD as well as the DFAD method can clearly improve if given more time and are reliable methods if the hardware and time is unlimited. For the current time-constraint test they lag behind
-- Furthermore ODSD even with generous data sampling, is completely data limited. Using only the stylegan data, it barely goes to 12-13% while with the 50% of the combined losses the accuracy jumps to ~31% with a lot of improvement margin given the time
+- Furthermore ODSD even with generous data sampling, is completely data limited. Using only the stylegan data, it barely goes to 12-13% while with the 50% of the combined losses the accuracy jumps to ~31% with a lot of margin for improvement given the time
 - ZSKT method currently does not work, it needs further testing on why that is (TODO).
 
 | **Method**                       | **Accuracy** | **Loss** |  **F1 Score(macro)** |
@@ -269,6 +269,25 @@ Some notes about using knowledge distillation in-between Transformers:
 - The time budget for ViT -> ViT operations will be set to 30 epochs while ViT -> CNN operations will still use 100 epochs
 - The examples will have examples of training ViTs using pretrained weights. In this case the lr is 5e-5 -> 5e-6. From scratch training the lr will be an order of magniture bigger, so 5e-4 -> 5e-5. All other hyperparameters will remain the same
 - If needed, more info for the cross architecture examples will be given on the next section
+- Due to the above plus the different model architecture, not all methods use stock hyperparameters. Usually the gamma of the methods is tuned town in order to improve the training process. A column named Notes will be added to these benchmarks to accomodate possible changes
+- The NST method seemed to fair by far the best, with the caveat that the training time was more than double the other methods (~80s vs ~170s)
+
+| **Method**                         | **Accuracy** | **Loss** |  **F1 Score(macro)** |      ** Notes **        |
+| :--------------------------------- | :----------: | :------: | :------------------: | :---------------------: |
+| **Teacher(DeiT Small) baseline**   |    89.04%    |   0.521  |         0.8904       |                         |
+| **Student(DeiT Tiny) baseline**    |    84.59%    |   0.651  |         0.8459       |                         |
+| **Student (no pretrained weights)**|    50.71%    |   1.919  |         0.4988       |                         |
+| **Non Data free methods**          | 
+| **AT**                             |    51.12%    |   1.886  |         0.5057       |      `gamma=64.0`       |
+| **DKD**                            |    52.36%    |   2.111  |         0.5166       |  `tckd=0.25; nckd=2.0`  |
+| **KD**                             |    51.72%    |   1.997  |         0.5111       |                         |
+| **NST**                            |    58.48%    |   1.559  |         0.5822       |    `gamma=64.0`         |
+| **PKT**                            |    51.35%    |   1.913  |         0.5084       |                         |
+| **RKD Angle (Does not work)**      |    -         |   -      |         -            |       -                 |
+| **RKD Dist**                       |    52.08%    |   1.856  |         0.5160       |       `gamma=1.0`       |
+| **SP**                             |    52.11%    |   1.848  |         0.5159       |       `gamma=64.0`       |
+| **SSP**                            |    49.97%    |   1.944  |         0.4949       |       `gamma=16.0`      |
+
 
 ___
 
