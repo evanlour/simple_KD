@@ -296,6 +296,20 @@ ___
 
 ## Performance Results (Cross-arch)
 
+- The process here will be the same with the CNN section, with the difference that the teacher will be a deit small ViT. That means that only 20% of the data will be used again
+- The inputs will also be upscaled to 224x224 to order the transformer input dimensions
+- Methods that require intermediates features will not work out of the box as the CNN features with the transformer attention layers differ significantly
+
+| **Method**                       | **Accuracy** | **Loss** |  **F1 Score(macro)** |
+| :----------------                | :----------: | :------: | :------------------: |
+| **Teacher(DeiT Small) baseline** |    89.04%    |   0.521  |         0.8904       |
+| **Student(Resnet18) baseline**   |    75.46%    |   0.936  |         0.7540       |
+| **Student with low data**        |    55.12%    |   1.738  |         0.5458       |
+| **Non Data free methods**        | 
+| **DKD**                          |    62.11%    |   1.788  |         0.6158       |
+| **KD**                           |    58.76%    |   1.715  |         0.5823       |
+| **PKT**                          |    55.44%    |   1.702  |         0.5506       |
+
 ___
 
 ## Testing & Quality Verification
