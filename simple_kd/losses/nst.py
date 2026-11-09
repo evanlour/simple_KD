@@ -13,17 +13,20 @@ class NSTLoss(torch.nn.Module):
     Args:
         gamma (float, optional): The gamma of the loss. Defaults to 256.0.
         stage_percentages (list[float] | tuple[float], optional): Per-stage weight fractions for NST loss.
-            Defaults to (0.1, 0.1, 0.3, 0.6).
+            Defaults to (0.1, 0.1, 0.2, 0.6).
+        interpolation_mode (str, optional): The interpolation mode if the stages do not match. For 3D (attention for example), choose linear, while for 4D bilinear.
     """
 
     def __init__(
         self,
         gamma: float = 256.0,
-        stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.3, 0.6),
+        stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
+        interpolation_mode: str = "bilinear",
     ):
         super().__init__()
         self.gamma = gamma
         self.stage_percentages = stage_percentages
+        self.interpolation_mode = interpolation_mode
 
     def forward(
         self,
@@ -44,4 +47,5 @@ class NSTLoss(torch.nn.Module):
             teacher_stages=teacher_stages,
             stage_percentages=self.stage_percentages,
             gamma=self.gamma,
+            interpolation_mode=self.interpolation_mode,
         )

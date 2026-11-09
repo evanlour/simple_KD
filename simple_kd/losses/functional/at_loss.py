@@ -17,6 +17,7 @@ def at_loss(
     stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
     power: float = 2.0,
     gamma: float = 256.0,
+    interpolation_mode: str = "bilinear",
 ) -> torch.Tensor:
     """Code implementation of the Attention Transfer(AT) method.
 
@@ -33,6 +34,7 @@ def at_loss(
         stage_percentages (tuple[float] | list[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
         power (float, optional): The power the stages are elevated at to retrieve the attention map. Defaults to 2.0.
         gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 256.0.
+        interpolation_mode (str, optional): The interpolation mode if the stages do not match. For 3D (attention for example), choose linear, while for 4D bilinear.
 
     Returns:
         torch.Tensor: The distillation loss.
@@ -46,7 +48,9 @@ def at_loss(
         student_flat = _attention_map(student_stage, power)
         if teacher_flat.shape[2:] != student_flat.shape[2:]:
             student_flat = F.interpolate(
-                student_flat, size=teacher_flat.shape[2:], mode="bilinear"
+                student_flat,
+                size=teacher_flat.shape[2:],
+                mode=interpolation_mode,
             )
         loss += (
             F.mse_loss(student_flat, teacher_flat, reduction="mean") * stage_percentage
