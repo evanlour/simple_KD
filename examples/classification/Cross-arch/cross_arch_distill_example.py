@@ -31,7 +31,9 @@ TEST_LABELS_LOCATION = "/mnt/storage/Datasets/CIFAR100/CIFAR100_test_labels.npy"
 TEACHER_MODEL_LOCATION = (
     "/mnt/storage/Datasets_results/CIFAR100_vit_train_results/model.pth"
 )
-TARGET_SAVE_LOCATION = "/mnt/storage/Datasets_results/CIFAR100_cross_arch_distillation_results"
+TARGET_SAVE_LOCATION = (
+    "/mnt/storage/Datasets_results/CIFAR100_cross_arch_distillation_results"
+)
 
 CPU_AUGS = v2.Compose([v2.ToImage()])
 
