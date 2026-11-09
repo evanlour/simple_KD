@@ -28,6 +28,7 @@ def cc_loss(
     stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
     gamma: float = 1.0,
     p_order: int = 2,
+    interpolation_mode: str = "bilinear",
 ) -> torch.Tensor:
     """Moves instance and correlation level information from the teacher to the student.
 
@@ -39,6 +40,7 @@ def cc_loss(
         stage_percentages (tuple[float], optional): Tuple of floats representing each stage's contribution. Defaults to (0.1, 0.1, 0.2, 0.6).
         gamma (float, optional): Multiplies the final loss value by gamma. Defaults to 1.0.
         p_order (int, optional): The order of the Taylor series. Defaults to 2.
+        interpolation_mode (str, optional): The interpolation mode if the stages do not match. For 3D (attention for example), choose linear, while for 4D bilinear.
 
     Returns:
         torch.Tensor: The distillation loss.
@@ -50,7 +52,9 @@ def cc_loss(
     ):
         if teacher_stage.shape[2:] != student_stage.shape[2:]:
             student_stage = F.interpolate(
-                student_stage, size=teacher_stage.shape[2:], mode="bilinear"
+                student_stage,
+                size=teacher_stage.shape[2:],
+                mode=interpolation_mode,
             )
 
         student_cc = _get_correlation_matrix(

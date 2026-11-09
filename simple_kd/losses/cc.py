@@ -13,16 +13,19 @@ class CCLoss(torch.nn.Module):
     Args:
         gamma (float, optional): Multiplier for the final loss value. Defaults to 1.0.
         stage_percentages (tuple[float, ...] | list[float], optional): Relative weights for each network stage. Defaults to (0.1, 0.1, 0.2, 0.6).
+        interpolation_mode (str, optional): The interpolation mode if the stages do not match. For 3D (attention for example), choose linear, while for 4D bilinear.
     """
 
     def __init__(
         self,
         gamma: float = 1.0,
         stage_percentages: tuple[float, ...] | list[float] = (0.1, 0.1, 0.2, 0.6),
+        interpolation_mode: str = "bilinear",
     ):
         super().__init__()
         self.gamma = gamma
         self.stage_percentages = stage_percentages
+        self.interpolation_mode = interpolation_mode
 
     def forward(
         self,
@@ -43,4 +46,5 @@ class CCLoss(torch.nn.Module):
             teacher_stages=teacher_stages,
             gamma=self.gamma,
             stage_percentages=self.stage_percentages,
+            interpolation_mode=self.interpolation_mode,
         )

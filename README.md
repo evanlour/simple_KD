@@ -279,15 +279,18 @@ Some notes about using knowledge distillation in-between Transformers:
 | **Student (no pretrained weights)**|    50.71%    |   1.919  |         0.4988       |                         |
 | **Non Data free methods**          | 
 | **AT**                             |    51.12%    |   1.886  |         0.5057       |      `gamma=64.0`       |
+| **CC**                             |    51.35%    |   1.932  |         0.5084       |                         |
 | **DKD**                            |    52.36%    |   2.111  |         0.5166       |  `tckd=0.25; nckd=2.0`  |
 | **KD**                             |    51.72%    |   1.997  |         0.5111       |                         |
+| **KD_SVD (Does not work)**         |    -         |   -      |         -            |       -                 |
 | **NST**                            |    58.48%    |   1.559  |         0.5822       |    `gamma=64.0`         |
 | **PKT**                            |    51.35%    |   1.913  |         0.5084       |                         |
-| **RKD Angle (Does not work)**      |    -         |   -      |         -            |       -                 |
+| **RKD Angle (Failed to train)**    |    -         |   -      |         -            |       -                 |
 | **RKD Dist**                       |    52.08%    |   1.856  |         0.5160       |       `gamma=1.0`       |
-| **SP**                             |    52.11%    |   1.848  |         0.5159       |       `gamma=64.0`       |
+| **Sobolev (Does not work)**        |    -         |   -      |         -            |       -                 |
+| **SP**                             |    52.11%    |   1.848  |         0.5159       |       `gamma=64.0`      |
 | **SSP**                            |    49.97%    |   1.944  |         0.4949       |       `gamma=16.0`      |
-
+| **Non Data free methods (TODO)**   | 
 
 ___
 
