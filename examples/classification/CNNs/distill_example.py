@@ -184,6 +184,10 @@ if __name__ == "__main__":
     # student_stages = apply_hooks(
     #     student_model, ["layer1.1.bn2", "layer2.1.bn2", "layer3.1.bn2", "layer4.1.bn2"] # type: ignore
     # )
+    # If you use CRD:
+    # student_stages = apply_hooks(student_model, ["avgpool"])
+    # teacher_stages = apply_hooks(teacher_model, ["avgpool"])
+    # Remember to also prepare the criterion
 
     distillation_criterion = DKDLoss()
     student_optimizer = torch.optim.AdamW(

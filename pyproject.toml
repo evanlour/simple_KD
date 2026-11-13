@@ -17,7 +17,9 @@ dependencies = [
     "opencv-python>=4.0,<5.0",
     "pyarrow>=22.0",
     "scikit-learn>=1.7",
-    "timm>=1.0.20"
+    "timm>=1.0.20",
+    "datasets>=5.0.0",
+    "transformers>=5.10.0",
 ]
 
 [project.optional-dependencies]

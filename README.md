@@ -64,6 +64,7 @@ accelerate library in order to support multiple GPUs.
 | :--- | :--- | :--- | :--- |
 | **AT**     | `ATLoss`     | `at_loss`     | Attention map matching between the teacher and the student models |
 | **CC**     | `CCLoss`     | `cc_loss`     | Attempts to improve correlation between the teacher and the student |
+| **CRD**    | `CRDLoss`    | -             | Uses the structure of the teacher to extract more information|
 | **KD_SVD** | `KD_SVDLoss` | `kd_svd_loss` | Uses SVD on intermediate layers of the student in order to extract information |
 | **Sobolev**| `SobolevLoss` | `sobolev_loss`| Encodes additional information by incorporating target derivates along the target values |
 | **SP**     | `SPLoss`     | `sp_loss`     | Attempts to match the teacher and student representation space by keeping similar pairwise similarities |
@@ -218,6 +219,7 @@ The following table summarizes the performance on CIFAR100 of various distillati
 - For comparing non Data Free methods only 20% of the train data was used, simulating a reduced data scenario. Due to this the benchmark numbers might be drastically different than the ones mentioned on their original papers, with some methods vastly outperforming others due to the nature of the problem. Generally, almost all the methods showed increased performance compared to the baseline, even complimentary methods such as the CC loss.
 - For the KD SVD method there were several modifications needed due to the SVD solver, diverging significantly from the original implementation.
 - For the Sobolev method the default distillation pipeline will not work. In order for it to work ```inputs = inputs.requires_grad_(True)``` is needed before retrieving the outputs, as well as enabling grads for the teacher and disabling compiling the models. I do not implement options for all of these inside the current loop as i believe it will be made overly complex for the other existing methods. Training is also around 4x times slower.
+- For the CRD method the gammas were lowered alot, the final criterion was `CRDLoss(10000, 512, 512, nce_t=0.05, student_gamma=0.25, teacher_gamma=0.25))`.
 - For the Data Free methods, as there are a lot of variables, the hyperparameters used are hardcoded inside the examples. As Data free methods are usually time-intensive, i tried to keep a total train time of around an hour for each. I will attach more info for the methods below. For reference, my hardware consists of an Nvidia RTX3060 and 16GB or RAM.
 -  I set the DAFL epochs to 100  instead of 2000 used in the original paper and used a more aggresive optimizer setup as well as a much higher info entropy loss (80 instead of 20) to prevent generator collapse
 - For the gaussian distillation 50K images of StyleGAN seems to not be enough as training goes almost immediately to 40+% and then very slowly increases. Using the combined noise datasets yields similar performance to the gaussian noise.
@@ -233,6 +235,7 @@ The following table summarizes the performance on CIFAR100 of various distillati
 | **Non Data free methods**        | 
 | **AT**                           |    57.01%    |   1.694  |         0.5639       |
 | **CC**                           |    52.83%    |   1.862  |         0.5227       |
+| **CRD**                          |    53.18%    |   1.832  |         0.5254       |
 | **DKD**                          |    67.05%    |   1.321  |         0.6669       |
 | **KD**                           |    60.18%    |   1.611  |         0.5968       |
 | **KD_SVD**                       |    51.74%    |   1.816  |         0.5081       |
@@ -280,6 +283,7 @@ Some notes about using knowledge distillation in-between Transformers:
 | **Non Data free methods**          | 
 | **AT**                             |    51.12%    |   1.886  |         0.5057       |      `gamma=64.0`       |
 | **CC**                             |    51.35%    |   1.932  |         0.5084       |                         |
+| **CRD**                             |   51.03%    |   1.938  |         0.4931       |`CRDLoss(50000, 192, 384, teacher_gamma=0.05, student_gamma=0.05)`|
 | **DKD**                            |    52.36%    |   2.111  |         0.5166       |  `tckd=0.25; nckd=2.0`  |
 | **KD**                             |    51.72%    |   1.997  |         0.5111       |                         |
 | **KD_SVD (Does not work)**         |    -         |   -      |         -            |       -                 |
@@ -306,6 +310,7 @@ ___
 | **Student(Resnet18) baseline**   |    75.46%    |   0.936  |         0.7540       |
 | **Student with low data**        |    55.12%    |   1.738  |         0.5458       |
 | **Non Data free methods**        | 
+| **CRD**                          |    55.43%    |   1.714  |         0.5499       |
 | **DKD**                          |    62.11%    |   1.788  |         0.6158       |
 | **KD**                           |    58.76%    |   1.715  |         0.5823       |
 | **PKT**                          |    55.44%    |   1.702  |         0.5506       |
@@ -341,6 +346,7 @@ This project builds upon the following repositories and methods. Thanks to their
 | **AGC (Adaptive Gradient Clipping)** | [High-Performance Large-Scale Image Recognition Without Normalization](https://arxiv.org/pdf/2102.06171) | [https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py](https://github.com/huggingface/pytorch-image-models/blob/main/timm/utils/agc.py) |
 | **AT loss** | [PAYING MORE ATTENTION TO ATTENTION:IMPROVING THE PERFORMANCE OF CONVOLUTIONAL NEURAL NETWORKS VIA ATTENTION TRANSFER](https://arxiv.org/pdf/1612.03928) | [https://github.com/szagoruyko/attention-transfer](https://github.com/szagoruyko/attention-transfer) |
 | **CC loss** | [Correlation Congruence for Knowledge Distillation](https://openaccess.thecvf.com/content_ICCV_2019/papers/Peng_Correlation_Congruence_for_Knowledge_Distillation_ICCV_2019_paper.pdf) | - |
+| **CRD loss** | [CONTRASTIVE REPRESENTATION DISTILLATION](https://arxiv.org/pdf/1910.10699) | [https://github.com/HobbitLong/RepDistiller](https://github.com/HobbitLong/RepDistiller) |
 | **DAFL** | [Data-Free Learning of Student Networks](https://arxiv.org/pdf/1904.01186) | [https://github.com/autogyro/DAFL](https://github.com/autogyro/DAFL) |
 | **DFAD** | [Data-Free Adversarial Distillation](https://arxiv.org/pdf/1912.11006) | [https://github.com/VainF/Data-Free-Adversarial-Distillation](https://github.com/VainF/Data-Free-Adversarial-Distillation) |
 | **DKD loss** | [Decoupled Knowledge Distillation](https://arxiv.org/pdf/2203.08679) | [https://github.com/megvii-research/mdistiller](https://github.com/megvii-research/mdistiller) |

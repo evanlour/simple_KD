@@ -1,5 +1,6 @@
 from .at_loss import at_loss
 from .cc_loss import cc_loss
+from .crd_loss import _contrast_loss
 from .dkd_loss import dkd_loss
 from .kd_loss import kd_loss
 from .kd_svd_loss import kd_svd_loss
@@ -12,6 +13,7 @@ from .sp_loss import sp_loss
 from .ssp_loss import ssp_loss
 
 __all__ = [
+    "_contrast_loss",
     "at_loss",
     "cc_loss",
     "dkd_loss",

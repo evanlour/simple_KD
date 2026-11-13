@@ -183,6 +183,10 @@ if __name__ == "__main__":
     #         "blocks.11.attn.qkv",
     #     ],  # type: ignore
     # )
+    # If you use CRD:
+    # student_stages = apply_hooks(student_model, ["fc_norm"])
+    # teacher_stages = apply_hooks(teacher_model, ["fc_norm"])
+    # Remember to also prepare the criterion!
 
     student_model = student_model.to(memory_format=torch.channels_last)  # type: ignore
     teacher_model = teacher_model.to(memory_format=torch.channels_last)  # type: ignore

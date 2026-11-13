@@ -1,5 +1,6 @@
 from .at import ATLoss
 from .cc import CCLoss
+from .crd import CRDLoss
 from .dkd import DKDLoss
 from .kd import KDLoss
 from .kd_svd import KD_SVDLoss
@@ -14,6 +15,7 @@ from .ssp import SSPLoss
 __all__ = [
     "ATLoss",
     "CCLoss",
+    "CRDLoss",
     "DKDLoss",
     "KDLoss",
     "KD_SVDLoss",
